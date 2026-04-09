@@ -1,3 +1,240 @@
 ---
 alwaysApply: true
 ---
+
+# Company Context: MoneyLion
+
+> **Purpose:** This document provides foundational context for generating product definitions, designs, and feature briefs at MoneyLion. Reference this alongside initiative-specific briefs when prompting for design or product work.
+>
+> **Related files:**
+> - `moneylion-project-instructions.md` — Design consulting role, voice/tone, UX principles, feedback frameworks (the "how to think" file)
+> - `moneylion-workflow-instructions.md` — Shorthand triggers, response formats, session patterns (the "how to operate" file)
+> - `MLDS-4_0-Reference.md` — All visual tokens, component specs, spacing, colors (the "source of truth" for specific values)
+
+---
+
+## Vision & Mission
+
+**Vision:** Make every paycheck a step forward with one connected ecosystem that turns everyday money management into momentum.
+
+**Strategic ambition:** Become the primary financial home for financially emerging households — the place where paychecks live, bills are managed, gaps are covered, and wealth is built. The goal is to move from being a point solution (today MoneyLion = Instacash in most users' minds) to being a trusted, connected system built around the paycheck.
+
+**The core problem MoneyLion is solving:** Cash flow volatility. 65% of Americans — including 45% of six-figure earners — live paycheck to paycheck. The financial system was built for predictability, not pressure. MoneyLion is uniquely positioned to own this problem end-to-end because it already has the rails (banking, credit, EWA, investing, marketplace) that others address only in fragments.
+
+---
+
+## What We Do
+
+MoneyLion is building the first connected financial ecosystem for financially emerging households. Rather than offering separate products that users stitch together themselves, MoneyLion is moving toward a unified system organized around five jobs-to-be-done: **See, Move, Cover, Plan, Grow**.
+
+| Pillar | What It Does |
+|---|---|
+| **See** | Know what's coming before it hits — bills, paydays, shortfalls, safe-to-spend balance |
+| **Move** | Auto-route income to bills, expenses, and savings; never miss a payment |
+| **Cover** | Access cash when short, avoid overdrafts, split big expenses |
+| **Plan** | Turn pressure into progress — manage subscriptions, debt, and big upcoming costs |
+| **Grow** | Earn cashback, build savings, invest surplus, build credit |
+
+This framework should be referenced when designing any feature — ask which pillar(s) a feature serves, and whether it connects to the others.
+
+---
+
+## Product Surface
+
+### Core Financial Products
+
+- **RoarMoney (Banking)** — Checking account, debit card, direct deposit; the intended "home" for paychecks. Being repositioned as the cash flow command center where income, bills, and spending sync.
+- **Instacash (EWA)** — Earned wage access / cash advances before payday. Being repositioned from a standalone product to the always-on overdraft protection layer within the ecosystem. Do not frame as a loan.
+- **Credit Builder** — Credit-building loan that reports to all 3 bureaus; being repositioned as the progress engine where on-time repayment turns into visible forward motion.
+- **Split** — Bill splitting / BNPL for large life expenses (rent, tuition, childcare). Previously known only as a rent-splitting tool; being expanded and repositioned as the BNPL solution for life's biggest expenses.
+- **Investing** — Managed and active investment accounts; part of the "Grow" pillar, turns surplus into wealth.
+- **Protection** — Identity theft protection and scam monitoring integrated into the MoneyLion membership. The peace-of-mind layer that protects paychecks and financial progress.
+
+### Engagement & Education
+- **Short-form video** — Financial education content in a feed format
+- **Quizzes** — Interactive content to educate and engage users
+- **Community** — Social layer where users post questions, share money wins, and connect with peers
+- **PFM (Personal Finance Management)** — A core cross-cutting capability, not just a feature. PFM surfaces insights that drive actions across all products (e.g., detecting low balance → triggering Instacash offer; detecting upcoming large bill → offering Split).
+
+### Marketplace
+- **Financial product marketplace** — Users can browse, compare, and check eligibility for third-party financial products (loans, credit cards, insurance, etc.)
+- Marketplace is both a revenue channel and a personalization surface; it functions as the commerce layer connecting users to the right product at the right moment.
+
+### Membership: MoneyLion One
+MoneyLion is evolving its membership from fragmented tiers (WOW) to a unified **MoneyLion One** membership — the vehicle that makes the system's value tangible.
+
+- **Pricing:** $9.99–$19.99/mo, tiered by direct deposit amount (rewards users for bringing their paycheck to MoneyLion)
+- **Value stack:** Full product access + fee savings + cashback on debit spend + savings APY + identity protection
+- **Design principle:** Membership is an ROI engine, not a subscription. Users should see visible, measurable savings and progress — not just a paywall.
+- When designing membership-adjacent features, show the concrete value: "You saved $X this month" or "You earned Y% back."
+
+---
+
+## Business Model
+
+MoneyLion has a diversified revenue model:
+
+| Revenue Stream | Description |
+|---|---|
+| **Interchange fees** | Revenue from debit card spend on the MoneyLion card |
+| **Subscriptions / Membership** | MoneyLion One membership fees, tiered by direct deposit depth |
+| **Marketplace referral fees** | Commission earned when users are matched to and take third-party financial products |
+| **Interest / lending** | Revenue from EWA (Instacash Turbo fees) and credit products |
+
+The strategic shift underway is moving from **fee-based monetization** (charging for individual product use) toward **system monetization** (recurring membership tied to the depth of the paycheck relationship). More paycheck = lower member price = deeper engagement = higher LTV. Design should support this: features that drive direct deposit adoption and cross-product usage directly support the business model.
+
+---
+
+## Target User
+
+### Who They Are: Financially Emerging Households
+
+MoneyLion's target is not the struggling or the wealthy — it's the **stretched**: households that have steady income but live on thin margins due to rising costs, unpredictable expenses, and the structural volatility of modern cash flow.
+
+**Key stats (from internal research, N=2000, avg HHI $75k+):**
+- 66% cite rising cost of living as their top concern
+- 77% faced a hard-to-cover expense in the past 6 months
+- 49% say paying off debt is their #1 financial goal
+- 47% carry a credit card balance most months
+
+**The monthly cash flow cycle these users live:**
+1. **Payday → Relief** — "I can finally breathe"
+2. **Bills hit → Pressure** — Routine spend erodes the paycheck fast
+3. **Unexpected expense → Stress/Crisis** — One surprise resets everything
+4. **End of month → Anxiety** — Starting again from zero or behind
+
+MoneyLion intercepts each of these moments. Designing for this cycle is core to the product.
+
+### User Segments (by Cash Flow Ratio = L6M spend / income)
+
+| Segment | Ratio | Description | Strategic Priority |
+|---|---|---|---|
+| **Stable** | < 1.0 | Living within means, some surplus | Secondary |
+| **Stretched** | 1.0–1.5 | Thin margins, high stress, biggest growth opportunity | **Primary** |
+| **Strained** | > 1.5 | Spending beyond income, at risk | Secondary feeder |
+
+30% of bank-verified users sit in the Stretched (1.0–1.5) range. MoneyLion historically has focused on Stretched users, but is expanding into Stable as well, i.e. users that are on average ok but occasionally get stretched.
+
+### User Jobs-to-Be-Done by Flow State
+
+| User State | Primary Need | Desired Feeling |
+|---|---|---|
+| Struggling to make ends meet | Cash to bridge gaps, avoid overdrafts | "Always covered, never overdraft" |
+| Paycheck to paycheck | Smooth expenses, cut debt costs, stay predictable | "Keeps me stable, no surprises" |
+| Living beyond means but with capacity | Path to debt-free, grow surplus, build wealth | "Clear path to financial security" |
+
+---
+
+## Strategic Context & Current Challenges
+
+### Where MoneyLion Is Today
+MoneyLion has powerful products but a fragmented experience. Users know Instacash, not MoneyLion — the brand is defined by a point product, not the ecosystem. Products have separate onboarding, separate UX, and separate value propositions. The onus is on users to stitch them together.
+
+Competitors like Cash App and neobanks have won by becoming the place money actually lives. MoneyLion's biggest opportunity is rebuilding around the paycheck, not the product.
+
+### Five Strategic Pillars (How We Win)
+
+1. **Win the Paycheck** — Make RoarMoney the easiest, most rewarding place to get paid. Automate inflow-linked rewards and savings. Build incentives that grow with paycheck share.
+
+2. **Build Daily Habit Loops** — Insights → action → reward. Personalize micro-actions that strengthen positive financial habits. Use AI to predict cash-flow risk and deliver proactive nudges before users fall behind.
+
+3. **Redefine Membership as Visible ROI** — Show users tangible progress ("You saved $X this month"). Turn membership into a personalized financial autopilot, not just a subscription.
+
+4. **Make Trust the Differentiator** — Integrate always-on scam monitoring, identity lock, fraud protection. Turn trust into a daily value prop that grows with each transaction.
+
+5. **Personalize Every Path** — Adapt experiences to each user's cash-flow phase (deficit → stability → surplus). Personalize across all surfaces: feed, comms, marketplace, navigation. Use behavioral and lifecycle signals to guide users toward surplus and savings.
+
+### Product Repositioning in Progress
+
+| Product | Old Positioning | New Positioning |
+|---|---|---|
+| Instacash | A fast and easy way to get cash | The cash flow command center |
+| Split | A rent-splitting tool | The BNPL solution for life's biggest expenses |
+| RoarMoney | A debit account for enhanced access | Where income, bills, and spending sync |
+| Credit Builder | A credit-building loan | The progress engine |
+| Norton LifeLock | An add-on for scam/ID protection | The peace-of-mind layer that protects paychecks |
+| Rewards | Occasional cashback on spend | Everyday ROI that helps members keep more |
+
+When writing copy or designing features, use the **new positioning** as the lens.
+
+---
+
+## Near-Term Roadmap Context (Calendar Year 2026)
+
+
+**Key launches to be aware of:**
+- **PFM v2** — New cash flow views, safe-to-spend, action-based insights
+- **Split** — Moving from alpha/beta to full external acquisition launch
+- **IC repricing** — Instacash Turbo fee restructuring; pricing is in active testing
+- **MoneyLion One** — Unified membership replacing WOW and Credit Builder Plus; tiered by DD depth
+- **Bill Pay + Subscription Manager** — Part of "Move" pillar, route bills into RoarMoney
+
+When designing features, be aware of which stage they fall in and design accordingly (MVP/validate vs. scaled/polished).
+
+---
+
+## Product Constraints
+
+### Regulatory & Compliance
+- MoneyLion operates in a heavily regulated environment spanning banking, lending, and investment products
+- Features touching **money movement, credit, or investment** require compliance review before launch
+- Relevant regulatory bodies include the **CFPB, FINRA, SEC**, and state-level regulators
+- **EWA/Instacash must never be framed as a loan** — this is an active regulatory sensitivity; language like "advance," "access," or "coverage" is preferred over "loan" or "borrow"
+- Any copy or UI related to rates, APY, eligibility, or financial outcomes must be reviewed by compliance
+- **Assume all financial features need a compliance sign-off** unless explicitly noted otherwise
+
+### Design System
+- MoneyLion has an established design system and component library
+- New designs should extend existing patterns rather than introduce novel UI conventions
+- Visual language: clean, approachable, mobile-first
+- The app is undergoing a brand refresh as part of the "Run" phase — designs should anticipate a more cohesive, ecosystem-forward visual language
+
+### Personalization Engine
+- MoneyLion uses ML-driven personalization to surface relevant products, content, and offers
+- Product definitions should account for **personalized vs. default states** — what does the experience look like for a new user with no data vs. a returning user with a full profile and linked bank account?
+- Product definitions should account for the **new user** experience in addition to **existing user** experiences. New users may not have as much user-permissioned data connected, may not be familiar with MoneyLion products, and may not have as much trust in MoneyLion.
+- Cash flow ratio (spend/income) is a key segmentation signal — design should consider how an experience differs for a Stretched vs. Stable user
+- Eligibility logic for marketplace products, Instacash limits, and Credit Builder Plus loan is dynamic and user-specific
+
+### Partner & Embedded Finance
+- Several product areas are powered by third-party providers (banking partner, investment custodian, marketplace partners, protection via Norton LifeLock)
+- Design constraints sometimes derive from partner API capabilities or data availability
+- Features that touch partner-provided data should note this dependency in their briefs
+
+---
+
+## Key Product Principles
+
+1. **Fix the system, not the moment** — Every feature should connect to at least one other product or signal. Avoid one-off point solutions.
+2. **Progress must be visible** — Users need to see and feel forward motion: surplus created, credit built, fees avoided, ROI delivered. Design for tangible outcomes.
+3. **Win the paycheck first** — Direct deposit is the highest-leverage signal. Features that drive DD adoption unlock deeper personalization, lower member pricing, and higher LTV.
+4. **Trust is built through transparency** — Clear language, clear value. Users always know what's happening and why. Avoid dark patterns, surprise fees, or opaque eligibility.
+5. **Meet users at their moment of need** — The monthly cash flow cycle creates predictable stress points. Design should intercept these moments proactively, not reactively.
+6. **Education drives action** — Content and community are conversion and retention mechanisms, not just engagement fluff.
+
+---
+
+## Company History
+
+MoneyLion was founded in 2013 with the mission to empower anyone to make their best financial decisions. To do so, we focused on how new types of data can personalize, and expand access to, financial services, viewing that data and the models and services we could build on top of them as our moat.
+
+Our first products were in the lending space, using bank transaction data in addition to credit data to understand cashflow, income, expenses, and more. These enabled a more complete and real-time picture of a consumer's profile. In that sense, understanding financial data beyond the credit score is a deep part of our DNA. Over time, with an LTV and retention objective in mind, we expanded products to include depository products like managed investing and bank accounts, with the aim of being there for our customers in times of excess and times of need. We launched Instacash in 2019 to enable users to get access to their paycheck on-demand. 
+
+We also expanded our content capabilities with the acquisition of Malka in 2021 so we could engage, educate, and inspire our users; we then expanded our marketplace capabilities and pushed into B2B distribution models with the acquisition of Engine (then called Even Financial). We view this combination of "advice" - as expressed through PFM features but also content - with "selection" - via the financial products marketplace - as being key for being able to be both trusted and actionable.
+
+With our acquisition by Gen Digital in 2025, MoneyLion's strategy has been updated.
+1. We refined our vision, mission, and product strategy to more explicitly focus on the emerging household and their painpoints, as outlined in this document.
+2. We expanded our distribution "surface area" with additional owned and operated brands like LifeLock, Norton, and Avast; new channels like Gen's existing partner and employee benefits channels; as well as new international markets. These all represent opportunities for MoneyLion/Engine technologies (under the heading "Financial Wellness Technologies") to support brand and partner goals.
+
+---
+
+## What This Document Is Not
+
+- Specific feature requirements or acceptance criteria (see initiative briefs)
+- Current product metrics or OKRs (see product strategy docs)
+- Technical architecture or API documentation
+- Design system component specs
+
+---
+
+*Last updated: March 2026 — sources: product strategy doc "The Next Phase of Consumer Growth." Update when company strategy, product surface, or business model changes materially.*

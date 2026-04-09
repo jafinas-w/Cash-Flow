@@ -30,7 +30,7 @@ type Screen =
   | "manual-paycheck" | "manual-bills"
   | "cashflow";
 
-type WidgetVariant = "new" | "manual" | "linked";
+type AccountState = "new-user" | "manual-only" | "roarmoney-only" | "roarmoney-dd" | "bv-linked";
 type RiskLevel     = "ahead" | "tight" | "short";
 type PayFreq       = "weekly" | "biweekly" | "semimonthly" | "monthly";
 type Confidence    = "High confidence" | "Medium confidence" | "Low confidence";
@@ -101,6 +101,11 @@ const CF: Record<"linked"|"manual"|"partial", Record<RiskLevel, CFModel>> = {
   },
 };
 
+const ACCOUNT_BALANCE_DATA = {
+  roarmoney: { checking: 1492, savings: 0, roarMoney: 1492, creditCardLiability: 631 },
+  linked: { checking: 1684, savings: 1035, roarMoney: 1492, creditCardLiability: 631 },
+};
+
 const STATUS_COPY:  Record<RiskLevel, string> = { ahead:"You are ahead",   tight:"Budget is tight",   short:"You may come up short" };
 const STATUS_COLOR: Record<RiskLevel, string> = { ahead:T.tealDark,       tight:T.yellow,            short:T.red                   };
 const STATUS_BG:    Record<RiskLevel, string> = { ahead:T.bgAccent,       tight:T.bgWarning,         short:T.bgNegative            };
@@ -141,12 +146,6 @@ function PrimaryBtn({ label, onClick, bg = T.text1 }: { label:string; onClick?:(
   );
 }
 
-function OutlineBtn({ label, onClick }: { label:string; onClick?:()=>void }) {
-  return (
-    <button onClick={onClick} style={{ width:"100%", height:52, borderRadius:999, border:`1.5px solid ${T.border}`, background:"transparent", color:T.text1, fontWeight:600, fontSize:15, cursor:"pointer", fontFamily:"inherit" }}>{label}</button>
-  );
-}
-
 function StepBar({ step, total }: { step:number; total:number }) {
   return (
     <div style={{ display:"flex", gap:4 }}>
@@ -179,12 +178,19 @@ function SpendBar({ model }: { model:CFModel }) {
   );
 }
 
+function totalBalanceFor(state: AccountState): number | null {
+  if (state === "new-user" || state === "manual-only") return null;
+  if (state === "roarmoney-only") return ACCOUNT_BALANCE_DATA.roarmoney.roarMoney;
+  if (state === "roarmoney-dd") return ACCOUNT_BALANCE_DATA.roarmoney.roarMoney + ACCOUNT_BALANCE_DATA.roarmoney.checking + ACCOUNT_BALANCE_DATA.roarmoney.savings;
+  return ACCOUNT_BALANCE_DATA.linked.roarMoney + ACCOUNT_BALANCE_DATA.linked.checking + ACCOUNT_BALANCE_DATA.linked.savings;
+}
+
 /* ═══════════════════════════════════════════════════════════════════
    SCREEN 1 — ACCOUNTS
 ═══════════════════════════════════════════════════════════════════ */
-function CashFlowWidget({ variant, onTap }: { variant:WidgetVariant; onTap:()=>void }) {
+function CashFlowWidget({ accountState, onTap }: { accountState:AccountState; onTap:()=>void }) {
   const card: React.CSSProperties = { width:"100%", background:T.bgCard, border:`1px solid ${T.border}`, borderRadius:20, padding:20, textAlign:"left", cursor:"pointer", display:"grid", gap:12, fontFamily:"inherit" };
-  if (variant === "new") return (
+  if (accountState === "new-user") return (
     <button onClick={onTap} style={card}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
         <span style={{ fontSize:16, fontWeight:600 }}>Cash Flow</span>
@@ -200,15 +206,27 @@ function CashFlowWidget({ variant, onTap }: { variant:WidgetVariant; onTap:()=>v
       <div style={{ background:T.tealBright, borderRadius:999, height:44, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:600, fontSize:14 }}>Get started →</div>
     </button>
   );
-  if (variant === "manual") return (
+  if (accountState === "manual-only") return (
     <button onClick={onTap} style={card}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
         <span style={{ fontSize:16, fontWeight:600 }}>Cash Flow</span>
-        <Badge label="Low confidence" color={T.yellow} bg={T.bgWarning} />
+        <Badge label="Manual estimate" color={T.yellow} bg={T.bgWarning} />
       </div>
-      <p style={{ margin:0, fontSize:12, color:T.text3, fontWeight:600 }}>SAFE TO SPEND</p>
+      <p style={{ margin:0, fontSize:12, color:T.text3, fontWeight:600 }}>EXPECTED AFTER BILLS</p>
       <p style={{ margin:"-8px 0 0 0", fontSize:36, fontWeight:600, letterSpacing:-1 }}>~$190</p>
       <p style={{ margin:"-4px 0 0 0", fontSize:12, color:T.text3 }}>Manual data · Next paycheck Apr 15</p>
+      <div style={{ fontSize:13, color:T.tealDark, fontWeight:600 }}>View details →</div>
+    </button>
+  );
+  if (accountState === "roarmoney-only") return (
+    <button onClick={onTap} style={card}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <span style={{ fontSize:16, fontWeight:600 }}>Cash Flow</span>
+        <Badge label="Partial confidence" color={T.yellow} bg={T.bgWarning} />
+      </div>
+      <p style={{ margin:0, fontSize:12, color:T.text3, fontWeight:600 }}>SAFE TO SPEND</p>
+      <p style={{ margin:"-8px 0 0 0", fontSize:36, fontWeight:600, letterSpacing:-1 }}>$128</p>
+      <p style={{ margin:"-4px 0 0 0", fontSize:12, color:T.text3 }}>RoarMoney data only · Next paycheck Apr 14</p>
       <div style={{ fontSize:13, color:T.tealDark, fontWeight:600 }}>View details →</div>
     </button>
   );
@@ -229,27 +247,78 @@ function CashFlowWidget({ variant, onTap }: { variant:WidgetVariant; onTap:()=>v
   );
 }
 
-function AccountsScreen({ variant, onWidgetTap }: { variant:WidgetVariant; onWidgetTap:()=>void }) {
+function AccountsScreen({ accountState, onWidgetTap }: { accountState:AccountState; onWidgetTap:()=>void }) {
+  const totalBalance = totalBalanceFor(accountState);
+  const showsRoarMoney = accountState !== "new-user" && accountState !== "manual-only";
+  const showsExternalAccounts = accountState === "roarmoney-dd" || accountState === "bv-linked";
+
   return (
     <div>
       <NavBar title="Accounts" />
       <div style={{ padding:"4px 16px 24px", display:"grid", gap:12 }}>
-        <div style={{ background:T.bgCard, borderRadius:20, padding:20, border:`1px solid ${T.border}` }}>
-          <p style={{ margin:0, fontSize:11, color:T.text3, fontWeight:600, letterSpacing:"0.5px" }}>TOTAL BALANCE</p>
-          <p style={{ margin:"4px 0 2px", fontSize:34, fontWeight:600, letterSpacing:-1 }}>$4,211</p>
-          <p style={{ margin:0, fontSize:12, color:T.text3 }}>Across all connected accounts</p>
-        </div>
-        <div style={{ background:T.bgCard, borderRadius:20, padding:"14px 20px", border:`1px solid ${T.border}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-          <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-            <div style={{ width:44, height:44, borderRadius:14, background:T.bgAccent, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>🦁</div>
-            <div>
-              <p style={{ margin:0, fontSize:14, fontWeight:600 }}>RoarMoney</p>
-              <p style={{ margin:"2px 0 0 0", fontSize:12, color:T.text3 }}>Checking ••• 4821</p>
-            </div>
+        {totalBalance !== null && (
+          <div style={{ background:T.bgCard, borderRadius:20, padding:20, border:`1px solid ${T.border}` }}>
+            <p style={{ margin:0, fontSize:11, color:T.text3, fontWeight:600, letterSpacing:"0.5px" }}>TOTAL BALANCE</p>
+            <p style={{ margin:"4px 0 2px", fontSize:34, fontWeight:600, letterSpacing:-1 }}>{fmt(totalBalance)}</p>
+            <p style={{ margin:0, fontSize:12, color:T.text3 }}>
+              {accountState === "roarmoney-only"
+                ? "RoarMoney only"
+                : "Checking + Savings + RoarMoney (credit cards excluded)"}
+            </p>
           </div>
-          <p style={{ margin:0, fontSize:16, fontWeight:600 }}>$1,492</p>
-        </div>
-        <CashFlowWidget variant={variant} onTap={onWidgetTap} />
+        )}
+
+        {accountState === "manual-only" && (
+          <div style={{ background:T.bgCard, borderRadius:20, padding:20, border:`1px solid ${T.border}`, display:"grid", gap:8 }}>
+            <p style={{ margin:0, fontSize:16, fontWeight:600 }}>Let’s Get You Started</p>
+            <p style={{ margin:0, fontSize:13, color:T.text2, lineHeight:"19px" }}>
+              Link your bank to see your total balance and get a more accurate Cash Flow forecast.
+            </p>
+            <button style={{ height:40, borderRadius:999, border:"none", background:T.tealBright, color:T.text1, fontWeight:600, fontSize:13, fontFamily:"inherit", cursor:"pointer" }}>
+              Link bank account
+            </button>
+          </div>
+        )}
+
+        {showsRoarMoney && (
+          <div style={{ background:T.bgCard, borderRadius:20, padding:"14px 20px", border:`1px solid ${T.border}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+              <div style={{ width:44, height:44, borderRadius:14, background:T.bgAccent, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>🦁</div>
+              <div>
+                <p style={{ margin:0, fontSize:14, fontWeight:600 }}>RoarMoney</p>
+                <p style={{ margin:"2px 0 0 0", fontSize:12, color:T.text3 }}>Checking ••• 4821</p>
+              </div>
+            </div>
+            <p style={{ margin:0, fontSize:16, fontWeight:600 }}>{fmt(ACCOUNT_BALANCE_DATA.roarmoney.roarMoney)}</p>
+          </div>
+        )}
+
+        {showsExternalAccounts && (
+          <>
+            <div style={{ background:T.bgCard, borderRadius:20, padding:"14px 20px", border:`1px solid ${T.border}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                <div style={{ width:44, height:44, borderRadius:14, background:"#EEF5FF", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>🏦</div>
+                <div>
+                  <p style={{ margin:0, fontSize:14, fontWeight:600 }}>Linked checking</p>
+                  <p style={{ margin:"2px 0 0 0", fontSize:12, color:T.text3 }}>Across connected banks</p>
+                </div>
+              </div>
+              <p style={{ margin:0, fontSize:16, fontWeight:600 }}>{fmt(ACCOUNT_BALANCE_DATA.linked.checking)}</p>
+            </div>
+            <div style={{ background:T.bgCard, borderRadius:20, padding:"14px 20px", border:`1px solid ${T.border}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                <div style={{ width:44, height:44, borderRadius:14, background:"#F2EEFF", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>💰</div>
+                <div>
+                  <p style={{ margin:0, fontSize:14, fontWeight:600 }}>Linked savings</p>
+                  <p style={{ margin:"2px 0 0 0", fontSize:12, color:T.text3 }}>Included in total balance only</p>
+                </div>
+              </div>
+              <p style={{ margin:0, fontSize:16, fontWeight:600 }}>{fmt(ACCOUNT_BALANCE_DATA.linked.savings)}</p>
+            </div>
+          </>
+        )}
+
+        <CashFlowWidget accountState={accountState} onTap={onWidgetTap} />
         <div style={{ background:T.bgCard, borderRadius:20, padding:20, border:`1px solid ${T.border}`, opacity:0.45 }}>
           <div style={{ display:"flex", justifyContent:"space-between", marginBottom:10 }}>
             <span style={{ fontSize:16, fontWeight:600 }}>Spending</span>
@@ -502,8 +571,62 @@ function ManualBillsScreen({ onBack, onDone }: { onBack:()=>void; onDone:()=>voi
 /* ═══════════════════════════════════════════════════════════════════
    SCREEN 5 — CASH FLOW FEATURE
 ═══════════════════════════════════════════════════════════════════ */
-function CashFlowScreen({ variant, risk, onBack }: { variant:WidgetVariant; risk:RiskLevel; onBack:()=>void }) {
-  const profile = variant === "linked" ? "linked" : variant === "manual" ? "manual" : "partial";
+function LinkBankPrompt({ accountState, onLinkBank }: { accountState: AccountState; onLinkBank: () => void }) {
+  const [dismissed, setDismissed] = useState(false);
+  if (dismissed) return null;
+
+  const isManual    = accountState === "manual-only";
+  const isRoarOnly  = accountState === "roarmoney-only";
+  if (!isManual && !isRoarOnly) return null;
+
+  const heading = isManual
+    ? "Get a more accurate number"
+    : "See your full financial picture";
+  const body = isManual
+    ? "Your Cash Flow is based on what you entered manually. Link your bank account for a real-time view that updates automatically."
+    : "Your number is based on RoarMoney data only. Link your main spending account for a more complete and accurate Cash Flow.";
+  const cta = isManual ? "Link my bank account" : "Link another account";
+
+  return (
+    <div style={{
+      background: T.bgAccent, border: `1px solid ${T.border}`,
+      borderRadius: 20, padding: 16, display: "grid", gap: 12, position: "relative",
+    }}>
+      <button
+        onClick={() => setDismissed(true)}
+        style={{
+          position: "absolute", top: 12, right: 12, width: 28, height: 28,
+          borderRadius: 999, border: "none", background: "rgba(0,0,0,0.06)",
+          cursor: "pointer", fontSize: 15, color: T.text3, display: "flex",
+          alignItems: "center", justifyContent: "center", fontFamily: "inherit",
+          lineHeight: 1,
+        }}
+        aria-label="Dismiss"
+      >×</button>
+      <div style={{ paddingRight: 32 }}>
+        <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: T.tealDark }}>{heading}</p>
+        <p style={{ margin: "4px 0 0", fontSize: 13, lineHeight: "19px", color: T.text2 }}>{body}</p>
+      </div>
+      <button
+        onClick={onLinkBank}
+        style={{
+          height: 44, border: "none", borderRadius: 999, background: T.tealDark,
+          color: "#FFF", fontWeight: 600, fontSize: 13, cursor: "pointer",
+          fontFamily: "inherit", transition: "opacity 120ms ease",
+        }}
+      >{cta} →</button>
+      <p style={{ margin: 0, fontSize: 11, color: T.text3 }}>
+        Dismissed? You can always find this in Settings › Cash Flow › Improve your accuracy.
+      </p>
+    </div>
+  );
+}
+
+function CashFlowScreen({ accountState, risk, onBack, onLinkBank }: { accountState:AccountState; risk:RiskLevel; onBack:()=>void; onLinkBank:()=>void }) {
+  const profile =
+    accountState === "manual-only" ? "manual"
+      : accountState === "roarmoney-only" ? "partial"
+      : "linked";
   const m = CF[profile][risk];
   const [expanded, setExpanded] = useState(false);
 
@@ -530,16 +653,13 @@ function CashFlowScreen({ variant, risk, onBack }: { variant:WidgetVariant; risk
               <p style={{ margin:"2px 0 0", fontSize:12, color:T.text2 }}>This number may be lower confidence until your accounts refresh.</p>
             </div>
           )}
-          {profile === "manual" && (
-            <div style={{ background:T.bgWarning, border:`1px solid ${T.yellowBorder}`, borderRadius:12, padding:"10px 12px" }}>
-              <p style={{ margin:0, fontSize:13, fontWeight:600, color:T.yellow }}>Based on manually entered data</p>
-              <p style={{ margin:"2px 0 0", fontSize:12, color:T.text2 }}>Link a bank account for a more accurate, real-time number.</p>
-            </div>
-          )}
           <button style={{ height:52, border:"none", borderRadius:999, background: risk==="short" ? T.red : T.text1, color:"#FFF", fontWeight:600, fontSize:15, cursor:"pointer", fontFamily:"inherit" }}>
             {risk === "short" ? "See coverage options" : "Plan this week"}
           </button>
         </div>
+
+        {/* Soft BV-link prompt — manual and RoarMoney-only states (D1) */}
+        <LinkBankPrompt accountState={accountState} onLinkBank={onLinkBank} />
 
         {/* Instacash nudge — short state only */}
         {risk === "short" && (
@@ -620,22 +740,22 @@ const SCREEN_LABELS: Record<Screen, string> = {
 
 export default function App() {
   const [screen,  setScreen]  = useState<Screen>("accounts");
-  const [variant, setVariant] = useState<WidgetVariant>("new");
+  const [accountState, setAccountState] = useState<AccountState>("new-user");
   const [risk,    setRisk]    = useState<RiskLevel>("tight");
   const [bank,    setBank]    = useState<string | null>(null);
 
   const go = (s: Screen) => setScreen(s);
 
   const handleWidgetTap = () => {
-    if (variant === "new") go("splash");
+    if (accountState === "new-user") go("splash");
     else go("cashflow");
   };
 
   const handleBankSelect = (b: string) => { setBank(b); go("link-connecting"); };
 
-  const handleConnected = () => { setVariant("linked"); go("cashflow"); };
+  const handleConnected = () => { setAccountState("bv-linked"); go("cashflow"); };
 
-  const handleManualDone = () => { setVariant("manual"); go("cashflow"); };
+  const handleManualDone = () => { setAccountState("manual-only"); go("cashflow"); };
 
   return (
     <>
@@ -667,9 +787,11 @@ export default function App() {
           <div>
             <p style={{ margin:"0 0 8px", fontSize:10, fontWeight:600, color:T.text3, textTransform:"uppercase", letterSpacing:"0.6px" }}>Widget / profile state</p>
             <div style={{ display:"grid", gap:6 }}>
-              <Chip label="New user"      selected={variant==="new"}    onClick={()=>setVariant("new")}    />
-              <Chip label="Manual setup"  selected={variant==="manual"} onClick={()=>setVariant("manual")} />
-              <Chip label="Bank linked"   selected={variant==="linked"} onClick={()=>setVariant("linked")} />
+              <Chip label="New user"             selected={accountState==="new-user"}      onClick={()=>setAccountState("new-user")} />
+              <Chip label="Manual setup"         selected={accountState==="manual-only"}   onClick={()=>setAccountState("manual-only")} />
+              <Chip label="RoarMoney only"       selected={accountState==="roarmoney-only"} onClick={()=>setAccountState("roarmoney-only")} />
+              <Chip label="RoarMoney + Plaid DD" selected={accountState==="roarmoney-dd"}  onClick={()=>setAccountState("roarmoney-dd")} />
+              <Chip label="External BV linked"   selected={accountState==="bv-linked"}     onClick={()=>setAccountState("bv-linked")} />
             </div>
           </div>
 
@@ -682,7 +804,7 @@ export default function App() {
             </div>
           </div>
 
-          <button onClick={()=>{ go("accounts"); setVariant("new"); setRisk("tight"); }} style={{ height:40, border:`1px solid ${T.border}`, borderRadius:999, background:"transparent", fontSize:13, fontWeight:600, color:T.text2, cursor:"pointer", fontFamily:"inherit" }}>↺ Reset flow</button>
+          <button onClick={()=>{ go("accounts"); setAccountState("new-user"); setRisk("tight"); }} style={{ height:40, border:`1px solid ${T.border}`, borderRadius:999, background:"transparent", fontSize:13, fontWeight:600, color:T.text2, cursor:"pointer", fontFamily:"inherit" }}>↺ Reset flow</button>
 
           <p style={{ margin:0, fontSize:10, color:T.text3, lineHeight:"15px" }}>Font: DM Sans<br/>Production: Baton Turbo<br/>Tokens: MLDS 4.0</p>
         </div>
@@ -699,13 +821,13 @@ export default function App() {
 
           {/* Scrollable screen content */}
           <div style={{ flex:1, overflowY:"auto", maxHeight:730 }}>
-            {screen === "accounts"        && <AccountsScreen    variant={variant}  onWidgetTap={handleWidgetTap} />}
+            {screen === "accounts"        && <AccountsScreen    accountState={accountState}  onWidgetTap={handleWidgetTap} />}
             {screen === "splash"          && <SplashScreen      onClose={()=>go("accounts")} onLinkBank={()=>go("link-bank")} onManual={()=>go("manual-paycheck")} />}
             {screen === "link-bank"       && <LinkBankScreen    onBack={()=>go("splash")}    onSelect={handleBankSelect} />}
             {screen === "link-connecting" && <LinkConnectingScreen bank={bank ?? "Chase"} onConnected={handleConnected} />}
             {screen === "manual-paycheck" && <ManualPaycheckScreen onBack={()=>go("splash")} onContinue={()=>go("manual-bills")} />}
             {screen === "manual-bills"    && <ManualBillsScreen  onBack={()=>go("manual-paycheck")} onDone={handleManualDone} />}
-            {screen === "cashflow"        && <CashFlowScreen     variant={variant} risk={risk} onBack={()=>go("accounts")} />}
+            {screen === "cashflow"        && <CashFlowScreen     accountState={accountState} risk={risk} onBack={()=>go("accounts")} onLinkBank={()=>go("link-bank")} />}
           </div>
 
           {/* Home indicator */}

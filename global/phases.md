@@ -1,7 +1,7 @@
 # Cash Flow — Build Phases
 
 > **Purpose:** Working reference for design and build order. Update status markers as each phase completes.
-> **Last updated:** April 2026
+> **Last updated:** April 9, 2026
 > **Owner:** Jaf Inas / PFM Team
 
 ---
@@ -71,7 +71,7 @@ All decisions below are confirmed. No further alignment needed before building.
 
 ---
 
-## Phase 1 — Accounts Page: User State Logic 🟢 ⬜
+## Phase 1 — Accounts Page: User State Logic 🟢 ✅
 
 **Why first:** This is the entry point of the entire feature. Every stakeholder review starts here. It must show the right experience per user type before anything else is built on top of it. Lowest complexity — it is conditional rendering, not new screens.
 
@@ -80,9 +80,10 @@ All decisions below are confirmed. No further alignment needed before building.
 **Estimated effort:** 1 session
 
 ### Screens affected
-- Accounts page only
+- Accounts page
+- Cash Flow screen (BV-link prompt added, see note below)
 
-### User state matrix to implement
+### User state matrix implemented
 
 | User state | Total balance card | CF widget |
 |---|---|---|
@@ -92,17 +93,18 @@ All decisions below are confirmed. No further alignment needed before building.
 | RoarMoney with Plaid DD set up | Full balance (RoarMoney + DD source) | High confidence |
 | External BV-linked (with or without RoarMoney) | Sum of all linked checking + savings, no credit cards (D14, D15) | High confidence |
 
-### Key changes from current build
-- Remove hardcoded `$4,211` total balance — make it state-driven
-- New: "Let's Get You Started" card replaces balance card for manual users (D3)
-- New: RoarMoney-only state with partial confidence widget (D4)
+### What was built
+- Removed hardcoded `$4,211` total balance — state-driven via `totalBalanceFor()`
+- "Let's Get You Started" card replaces balance card for manual users (D3)
+- RoarMoney-only state with partial confidence widget (D4)
 - Credit card accounts excluded from balance sum (D14)
 - Savings visible in total balance but not in STS (D15)
+- **D1 (early): Soft BV-link prompt added to CF screen for `manual-only` and `roarmoney-only` states.** Dismissible. On dismiss, shows footnote directing user to Settings › Cash Flow › Improve your accuracy. CTA navigates to link bank flow. Pulled forward from Phase 6 since the CF screen was already open.
 
 ### Dependencies
 - None. All decisions locked. No open items blocking.
 
-### Success criteria
+### Success criteria ✅
 - Every user segment shows the correct balance card variant
 - CF widget always matches the user's actual data state
 - No balance figure shown when no financial data exists
@@ -136,12 +138,13 @@ All decisions below are confirmed. No further alignment needed before building.
   - Green remainder = expected after bills
 
 **Persistent BV-link prompt (D1)**
-- Position: below hero card, above "Why this number"
-- Dismissible via X button
-- After dismiss: accessible via Settings > Cash Flow > Improve your accuracy (Phase 7)
-- Copy direction: "Your number is based on what you entered. Link your bank for a real-time view."
-- CTA: "Link my bank account"
-- Does not resurface automatically in the same session after dismissal
+- ~~Position: below hero card, above "Why this number"~~ ✅ Built in Phase 1 (pulled forward)
+- ~~Dismissible via X button~~ ✅ Built in Phase 1
+- ~~After dismiss: accessible via Settings > Cash Flow > Improve your accuracy (Phase 7)~~ ✅ Footnote built in Phase 1
+- ~~Copy direction: "Your number is based on what you entered. Link your bank for a real-time view."~~ ✅ Built in Phase 1
+- ~~CTA: "Link my bank account"~~ ✅ Built in Phase 1
+- Note: Also applies to `roarmoney-only` state (different copy). Both states handled.
+- Does not resurface automatically in the same session after dismissal ✅
 
 ### Dependencies
 - D9 locked
@@ -150,7 +153,7 @@ All decisions below are confirmed. No further alignment needed before building.
 ### Success criteria
 - Manual and linked CF screens are visually and structurally distinct
 - User cannot mistake a manual estimate for a real-time balance-based number
-- BV-link prompt is present and dismissible
+- BV-link prompt is present and dismissible ✅
 
 ---
 
