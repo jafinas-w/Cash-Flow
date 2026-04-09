@@ -1,0 +1,749 @@
+---
+alwaysApply: true
+---
+
+# MLDS 4.0 — MoneyLion Design System Reference
+
+> **What this file is:** The single source of truth for all visual tokens, component specs, spacing, typography, and interaction patterns in the MoneyLion Design System. Every prototype, audit, and design recommendation should reference this file for exact values.
+>
+> **Related files:**
+> - `company-context.md` — Vision, strategy, product surface, user segments, regulatory constraints (the "what and why" file)
+> - `moneylion-project-instructions.md` — Design consulting role, voice/tone, UX principles, feedback frameworks
+> - `moneylion-workflow-instructions.md` — Shorthand triggers (`/react`, `/audit`, etc.), response formats, session patterns
+>
+> **Figma source:** [MLDS 4.0](https://www.figma.com/design/SyfKKZyUM3cW4IunxIk8Bj/MLDS-4.0--Don-t-Use-fig)
+> **Last updated:** March 2026
+
+---
+
+## React Prototype Token Map
+
+When building interactive prototypes (via `/react` or any JSX/HTML mockup), use these CSS custom properties. This ensures every prototype uses real MLDS values rather than approximations.
+
+**Important:** Baton Turbo is not available via Google Fonts or CDN. For prototypes, use `'DM Sans', -apple-system, system-ui, sans-serif` as the closest web-safe substitute. Note this substitution in prototype output so stakeholders know the final product uses Baton Turbo.
+
+### Light Mode (default for MoneyLion product screens)
+
+```css
+:root {
+  /* Font */
+  --font-family: 'DM Sans', -apple-system, system-ui, sans-serif;
+  --font-weight-regular: 400;
+  --font-weight-medium: 600;
+
+  /* Background */
+  --bg-primary: #F6F6F6;       /* Neutral-100 — screen bg */
+  --bg-secondary: #FFFFFF;      /* Neutral-0 — card bg */
+  --bg-tertiary: #F6F6F6;       /* Neutral-100 — nested surfaces */
+  --bg-alt: #000000;            /* Neutral-1000 — inverted surfaces */
+
+  /* Text */
+  --text-primary: #000000;
+  --text-secondary: rgba(0,0,0,0.64);   /* 64% black */
+  --text-tertiary: rgba(0,0,0,0.48);    /* 48% black */
+  --text-disabled: rgba(0,0,0,0.32);    /* 32% black */
+
+  /* Semantic */
+  --color-accent: #006657;       /* Teal-900 */
+  --color-positive: #006657;     /* Teal-900 */
+  --color-warning: #B89F00;      /* Yellow-700 */
+  --color-negative: #CE293F;     /* Red-600 */
+
+  /* Accent backgrounds */
+  --bg-accent: #E1FEFA;          /* Teal-100 */
+  --bg-positive: #E1FEFA;        /* Teal-100 */
+  --bg-warning: #FFFCE9;         /* Yellow-100 */
+  --bg-negative: #FFEBED;        /* Red-100 */
+
+  /* Brand primaries */
+  --teal-primary: #00E5C4;       /* Teal-600 */
+  --teal-dark: #006657;          /* Teal-900 */
+  --teal-light: #E1FEFA;         /* Teal-100 */
+  --red-primary: #FF334E;        /* Red-500 */
+  --yellow-primary: #FFE11F;     /* Yellow-500 */
+  --purple-primary: #7517E6;     /* Purple-500 */
+
+  /* Borders */
+  --border-primary: rgba(0,0,0,0.08);
+  --border-accent: #B2FCF1;      /* Teal-300 */
+  --border-negative: #FFADB8;    /* Red-300 */
+  --border-warning: #FFF3A5;     /* Yellow-300 */
+
+  /* Elevation */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+
+  /* Radii */
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 20px;
+  --radius-full: 999px;
+
+  /* Spacing (8pt grid) */
+  --space-4: 4px;
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-20: 20px;
+  --space-24: 24px;
+  --space-32: 32px;
+  --space-40: 40px;
+  --space-48: 48px;
+
+  /* Overlay */
+  --overlay: rgba(0,0,0,0.60);
+}
+```
+
+### Dark Mode
+
+```css
+[data-theme="dark"] {
+  --bg-primary: #000000;         /* Neutral-1000 */
+  --bg-secondary: #1F1F1F;       /* Neutral-900 */
+  --bg-tertiary: #333333;        /* Neutral-800 */
+  --bg-alt: #FFFFFF;
+
+  --text-primary: #FFFFFF;
+  --text-secondary: rgba(255,255,255,0.72);
+  --text-tertiary: rgba(255,255,255,0.48);
+  --text-disabled: rgba(255,255,255,0.32);
+
+  --color-accent: #33F6D8;       /* Teal-500 */
+  --color-warning: #FFED79;      /* Yellow-400 */
+  --color-negative: #FF7083;     /* Red-400 */
+
+  --bg-accent: #072C28;          /* Teal-1000 */
+  --bg-warning: #332D06;         /* Yellow-1000 */
+  --bg-negative: #330007;        /* Red-1000 */
+
+  --border-primary: rgba(255,255,255,0.16);
+  --border-accent: #098669;      /* Teal-800 */
+  --border-negative: #781624;    /* Red-800 */
+}
+```
+
+### Mobile Phone Frame (for prototype presentation)
+
+All prototypes rendering as mobile screens should use this wrapper pattern:
+
+```
+Frame width: 390px (iPhone 15 logical width)
+Content padding: 16px horizontal
+Status bar height: 54px (with time, signal, battery)
+Bottom nav height: 84px + 34px home indicator = 118px
+Safe content area: 390 x ~726px (between status bar and bottom nav)
+```
+
+---
+
+## Typography
+
+**Font Family:** Baton Turbo
+**Letter Spacing:** Negative tracking across all styles (typically -1 to -3)
+
+All weights use Medium (600) for Display, Headline, Title, and Label. Body uses Regular (400).
+
+### Base / Desktop (>1024px)
+
+| Style | Size | Line Height | Weight |
+|---|---|---|---|
+| Display Lg | 88px | 96px | Medium (600) |
+| Display Md | 60px | 72px | Medium (600) |
+| Display Sm | 44px | 52px | Medium (600) |
+| Headline Lg | 36px | 44px | Medium (600) |
+| Headline Md | 28px | 36px | Medium (600) |
+| Headline Sm | 24px | 32px | Medium (600) |
+| Title Lg | 20px | 28px | Medium (600) |
+| Title Md | 18px | 24px | Medium (600) |
+| Title Sm | 16px | 24px | Medium (600) |
+| Label Lg | 14px | 20px | Medium (600) |
+| Label Md | 12px | 18px | Medium (600) |
+| Label Sm | 10px | 16px | Medium (600) |
+| Body XL | 18px | 27px | Regular (400) |
+| Body Lg | 16px | 24px | Regular (400) |
+| Body Md | 14px | 20px | Regular (400) |
+| Body Sm | 12px | 18px | Regular (400) |
+
+### Tablet (<1024px) — Responsive Overrides
+
+Only Display and Headline sizes change. Title, Label, and Body remain the same.
+
+| Style | Size | Line Height |
+|---|---|---|
+| Display Lg | 60px | 72px |
+| Display Md | 44px | 52px |
+| Display Sm | 36px | 44px |
+| Headline Lg | 36px | 44px |
+| Headline Md | 28px | 36px |
+| Headline Sm | 24px | 32px |
+
+### Mobile (<480px) — Responsive Overrides
+
+| Style | Size | Line Height |
+|---|---|---|
+| Display Lg | 44px | 52px |
+| Display Md | 36px | 44px |
+| Display Sm | 28px | 36px |
+| Headline Lg | 28px | 36px |
+| Headline Md | 24px | 32px |
+| Headline Sm | 24px | 32px |
+
+### Prototype Type Usage Guide
+
+For mobile prototypes, common mappings:
+
+| UI Element | MLDS Style | CSS |
+|---|---|---|
+| Screen title | Headline Md (mobile) | 24px / 32px / 600 |
+| Section header | Title Lg | 20px / 28px / 600 |
+| Card title | Title Sm | 16px / 24px / 600 |
+| Body text | Body Lg | 16px / 24px / 400 |
+| Secondary text | Body Md | 14px / 20px / 400 |
+| Caption / meta | Body Sm | 12px / 18px / 400 |
+| Button label | Label Lg | 14px / 20px / 600 |
+| Chip / tag | Label Md | 12px / 18px / 600 |
+| Tiny label | Label Sm | 10px / 16px / 600 |
+
+---
+
+## Primitive Colors
+
+### Neutrals (Solid)
+
+| Token | Hex |
+|---|---|
+| Neutral-0 | `#FFFFFF` |
+| Neutral-100 | `#F6F6F6` |
+| Neutral-200 | `#EEEEEE` |
+| Neutral-300 | `#E2E2E2` |
+| Neutral-400 | `#C7C7C7` |
+| Neutral-500 | *Not extracted — verify in Figma* |
+| Neutral-600 | *Not extracted — verify in Figma* |
+| Neutral-700 | `#505050` |
+| Neutral-800 | `#333333` |
+| Neutral-900 | `#1F1F1F` |
+| Neutral-1000 | `#000000` |
+
+### Transparent Neutrals — Light (Black base)
+
+| Token | Value |
+|---|---|
+| Transparent-light-72 | `rgba(0,0,0,0.72)` |
+| Transparent-light-60 | `rgba(0,0,0,0.60)` |
+| Transparent-light-48 | `rgba(0,0,0,0.48)` |
+| Transparent-light-40 | `rgba(0,0,0,0.40)` |
+| Transparent-light-32 | `rgba(0,0,0,0.32)` |
+| Transparent-light-24 | `rgba(0,0,0,0.24)` |
+| Transparent-light-16 | `rgba(0,0,0,0.16)` |
+| Transparent-light-6 | `rgba(0,0,0,0.06)` |
+
+### Transparent Neutrals — Dark (White base)
+
+| Token | Value |
+|---|---|
+| Transparent-dark-72 | `rgba(255,255,255,0.72)` |
+| Transparent-dark-60 | `rgba(255,255,255,0.60)` |
+| Transparent-dark-48 | `rgba(255,255,255,0.48)` |
+| Transparent-dark-32 | `rgba(255,255,255,0.32)` |
+| Transparent-dark-24 | `rgba(255,255,255,0.24)` |
+| Transparent-dark-20 | `rgba(255,255,255,0.20)` |
+| Transparent-dark-16 | `rgba(255,255,255,0.16)` |
+| Transparent-dark-8 | `rgba(255,255,255,0.08)` |
+
+### Teal
+
+| Token | Hex | Note |
+|---|---|---|
+| Teal-100 | `#E1FEFA` | Accent background (light mode) |
+| Teal-200 | `#CEFDF6` | |
+| Teal-300 | `#B2FCF1` | Accent border (light mode) |
+| Teal-400 | `#76F9E5` | |
+| Teal-500 | `#33F6D8` | Accent content (dark mode) |
+| Teal-600 | `#00E5C4` | **Primary** — success bg, brand anchor |
+| Teal-700 | `#00B89D` | |
+| Teal-800 | `#098669` | Accent border (dark mode) |
+| Teal-900 | `#006657` | Accent content (light mode) |
+| Teal-1000 | `#072C28` | Accent background (dark mode) |
+
+### Red
+
+| Token | Hex | Note |
+|---|---|---|
+| Red-100 | `#FFEBED` | Negative background (light mode) |
+| Red-200 | `#FFADB8` | |
+| Red-300 | `#FFADB8` | Negative border (light mode) |
+| Red-400 | `#FF7083` | Negative content (dark mode) |
+| Red-500 | `#FF334E` | **Primary** |
+| Red-600 | `#CE293F` | Negative content (light mode) |
+| Red-700 | `#9D1F2F` | |
+| Red-800 | `#781624` | Negative bg (both modes), border (dark) |
+| Red-900 | `#54121B` | |
+| Red-1000 | `#330007` | Negative background (dark mode) |
+
+### Yellow
+
+| Token | Hex | Note |
+|---|---|---|
+| Yellow-100 | `#FFFCE9` | Warning background (light mode) |
+| Yellow-200 | `#FFF9D2` | |
+| Yellow-300 | `#FFF3A5` | Warning border (light mode) |
+| Yellow-400 | `#FFED79` | Warning content (dark mode) |
+| Yellow-500 | `#FFE11F` | **Primary** |
+| Yellow-600 | `#DAC11B` | |
+| Yellow-700 | `#B89F00` | Warning content (light mode) |
+| Yellow-800 | `#7A6A00` | Warning border (dark mode) |
+| Yellow-900 | `#5C5000` | |
+| Yellow-1000 | `#332D06` | Warning background (dark mode) |
+
+### Green (Partial — requires Figma verification)
+
+The Green palette is referenced in semantic tokens (Content/Semantic/Positive in dark mode uses Green-500; Background/Accent/Positive uses Green-1000) but the full primitive ramp was not extracted from Figma. Until verified, use Teal for positive/success states in prototypes.
+
+| Token | Hex | Status |
+|---|---|---|
+| Green-500 | *Not extracted* | Referenced in semantic tokens |
+| Green-1000 | *Not extracted* | Referenced in accent backgrounds |
+
+### Purple
+
+| Token | Hex | Note |
+|---|---|---|
+| Purple-100 | `#F1E8FC` | Purple accent bg (light mode) |
+| Purple-200 | `#E3D1FA` | |
+| Purple-300 | `#C8A2F5` | Purple border (dark mode) |
+| Purple-400 | `#9E5DEE` | |
+| Purple-500 | `#7517E6` | **Primary** — border (light mode) |
+| Purple-600 | `#6314C4` | |
+| Purple-700 | `#4C0F95` | |
+| Purple-800 | `#350A68` | |
+| Purple-900 | `#1D063A` | |
+
+> ⚠️ Figma labels this group "Purple · Under Deletion?" — verify deprecation status before using in new features. Safe to use in existing patterns (Membership tiers, contextual illustrations).
+
+### Contextual (Decorative/Illustration)
+
+| Token | Hex | Common Use |
+|---|---|---|
+| Contextual/Light-blue | `#91EBF7` | Illustrations |
+| Contextual/Indigo | `#6C82D0` | Illustrations |
+| Contextual/Yellow | `#FFE548` | Illustrations |
+| Contextual/Medium-teal | `#16ABAB` | Illustrations |
+| Contextual/Periwinkle-blue | `#8BB6EF` | Illustrations |
+| Contextual/Coral | `#FFA093` | Illustrations, accent cards |
+| Contextual/Purple | `#7517E6` | Illustrations |
+
+### Web-ALT (Marketing/Web only — not for product UI)
+
+| Token | Hex |
+|---|---|
+| Web-ALT/Light-blue | `#05F0FF` |
+| Web-ALT/Dark-blue | `#358AFF` |
+| Web-ALT/Green | `#00FF94` |
+| Web-ALT/Purple | `#7517E6` |
+| Web-ALT/Pink | `#FF92FA` |
+| Web-ALT/Yellow | `#FFFC00` |
+
+### Membership
+
+| Token | Hex |
+|---|---|
+| Membership New/100 | `#0B203D` |
+| Membership New/200 | `#153A6D` |
+| Membership New/300 | `#20559E` |
+| Membership New/400 | `#2A6FCE` |
+| Membership New/Primary (500) | `#358AFF` |
+| Membership New/600 | `#5DA1FF` |
+| Membership New/700 | `#86B9FF` |
+| Membership New/800 | `#C2DCFF` |
+| Membership New/900 | `#EBF3FF` |
+
+### Gradients
+
+| Token | Reference | Status |
+|---|---|---|
+| Gradient/Top | `gradients-top` | Stops not extracted |
+| Gradient/Bottom | `gradients-bottom` | Stops not extracted |
+| Gradient/Green-Blue | `gradients-greenblue` | Stops not extracted |
+| Gradient/Skeleton-light | `gradients-skeleton-light` | For loading states |
+| Gradient/Skeleton-dark | `gradients-skeleton-dark` | For loading states |
+
+---
+
+## Semantic Color Tokens
+
+### Content — Typography
+
+| Token | Light Mode | Dark Mode |
+|---|---|---|
+| Content/Typography/Primary | `#000000` | `#FFFFFF` |
+| Content/Typography/Secondary | `rgba(0,0,0,0.64)` | `rgba(255,255,255,0.72)` |
+| Content/Typography/Tertiary | `rgba(0,0,0,0.48)` | `rgba(255,255,255,0.48)` |
+| Content/Typography/Disabled | `rgba(0,0,0,0.32)` | `rgba(255,255,255,0.32)` |
+| Content/Typography/Primary-ALT | `#FFFFFF` | `#000000` |
+| Content/Typography/Secondary-ALT | `rgba(255,255,255,0.72)` | `rgba(0,0,0,0.64)` |
+
+### Content — Semantics
+
+| Token | Light Mode | Dark Mode |
+|---|---|---|
+| Content/Semantic/Accent | `#006657` (Teal-900) | `#33F6D8` (Teal-500) |
+| Content/Semantic/Positive | `#006657` (Teal-900) | Green-500 *(verify)* |
+| Content/Semantic/Warning | `#B89F00` (Yellow-700) | `#FFED79` (Yellow-400) |
+| Content/Semantic/Negative | `#CE293F` (Red-600) | `#FF7083` (Red-400) |
+| Content/Semantic/Black | `#000000` | `#000000` |
+| Content/Semantic/Black-secondary | `rgba(0,0,0,0.64)` | `rgba(0,0,0,0.64)` |
+| Content/Semantic/White | `#FFFFFF` | `#FFFFFF` |
+| Content/Semantic/White-secondary | `rgba(255,255,255,0.72)` | `rgba(255,255,255,0.72)` |
+
+### Background — Main
+
+| Token | Light Mode | Dark Mode |
+|---|---|---|
+| Background/Main/Primary | `#F6F6F6` (Neutral-100) | `#000000` (Neutral-1000) |
+| Background/Main/Secondary | `#FFFFFF` (Neutral-0) | `#1F1F1F` (Neutral-900) |
+| Background/Main/Tertiary | `#F6F6F6` (Neutral-100) | `#333333` (Neutral-800) |
+| Background/Main/Success | `#00E5C4` (Teal-600) | `#00E5C4` (Teal-600) |
+| Background/Main/Negative | `#781624` (Red-800) | `#781624` (Red-800) |
+| Background/Main/Primary-ALT | `#000000` (Neutral-1000) | `#FFFFFF` (Neutral-0) |
+
+### Background — Accent
+
+| Token | Light Mode | Dark Mode |
+|---|---|---|
+| Background/Accent/Neutral | `#EEEEEE` (Neutral-200) | `#505050` (Neutral-700) |
+| Background/Accent/Accent | `#E1FEFA` (Teal-100) | `#072C28` (Teal-1000) |
+| Background/Accent/Positive | `#E1FEFA` (Teal-100) | Green-1000 *(verify)* |
+| Background/Accent/Warning | `#FFFCE9` (Yellow-100) | `#332D06` (Yellow-1000) |
+| Background/Accent/Negative | `#FFEBED` (Red-100) | `#330007` (Red-1000) |
+| Background/Accent/Purple | `#F1E8FC` (Purple-100) | Purple-1000 *(verify)* |
+
+### Border
+
+| Token | Light Mode | Dark Mode |
+|---|---|---|
+| Border/Primary | `rgba(0,0,0,0.08)` | `rgba(255,255,255,0.16)` |
+| Border/Accent | `#B2FCF1` (Teal-300) | `#098669` (Teal-800) |
+| Border/Positive | `#ADF0C0` (Green-300) | Green-800 *(verify)* |
+| Border/Warning | `#FFF3A5` (Yellow-300) | `#7A6A00` (Yellow-800) |
+| Border/Negative | `#FFADB8` (Red-300) | `#781624` (Red-800) |
+| Border/Purple | `#7517E6` (Purple-500) | `#C8A2F5` (Purple-300) |
+
+### Overlay
+
+| Token | Light Mode | Dark Mode |
+|---|---|---|
+| Overlay/Default | `rgba(0,0,0,0.60)` | `rgba(0,0,0,0.60)` |
+| Overlay/Default-ALT | `rgba(255,255,255,0.60)` | `rgba(0,0,0,0.60)` |
+| Overlay/Surface-light | `#FFFFFF` | `#333333` |
+| Overlay/Surface-dark | `#333333` | `#FFFFFF` |
+
+---
+
+## Spacing & Layout
+
+| Context | Value |
+|---|---|
+| Grid base | 8px |
+| Internal padding (default) | 16px |
+| Card padding | 24px |
+| Section spacing | 32px |
+| Touch target (iOS) | 44x44px min |
+| Touch target (Android) | 48x48dp min |
+| Min gap between targets | 8px |
+| Label-to-input gap | 4-6px |
+| Between form fields | 16-24px |
+
+### Responsive Breakpoints
+
+| Breakpoint | Width | Notes |
+|---|---|---|
+| Desktop | >1024px | Base type sizes |
+| Tablet | <1024px | Display/Headline scale down |
+| Mobile | <480px | Display/Headline scale down further |
+
+---
+
+## Components
+
+### Accordion 3.0
+
+**Figma names:** `Accordion 3.0`, `Accordion item 3.0`
+
+**Anatomy:** Header row with label + chevron, expandable content area (lists, buttons, chips, nested accordions). Optional progress bar (8px, rounded).
+
+**Variants:** Collapsed (default), Expanded, With slot content, Nested, Grouped
+
+**Layout:** Width fills parent (343px mobile). Header 56-72px. 16px internal padding.
+
+---
+
+### Banner 3.0
+
+**Figma name:** `Banners 3.0`
+
+**Types:** Icon-based, Image-based
+
+**Variants:** Standard (0), Accent (1), Positive (2), Negative (3), Warning (4), Neutral (5)
+
+**Layout:** 343px width. 178-196px height.
+
+> Accent and Neutral variants flagged for potential deletion.
+
+---
+
+### Lifecycle Banner 3.0
+
+**Figma name:** `Lifecycle banner 3.0`
+
+**Variants:** Image Position = Right, Image Position = Left
+
+**Layout:** 328px width, 68px height. Compact horizontal banner.
+
+**Use case:** Lifecycle-stage messaging, onboarding prompts, feature announcements tied to user journey milestones.
+
+---
+
+### Bottom Navigation Bar 3.0
+
+**Figma names:** `Bottom Nav_Bar 3.0`, `Home Indicator iOS 3.0`
+
+**Layout:** 375px width, 84px height (nav bar) + 34px (home indicator).
+
+---
+
+### Button 3.0
+
+**Figma names:** `Button 3.0`, `Button Group 3.0`
+
+**Types:** Primary, Primary ALT, Secondary, Negative, Disabled, Outline, Transparent, Media
+
+**Sizes:**
+
+| Size | With text | Icon only |
+|---|---|---|
+| Large | 311x48px | 48x48px |
+| Medium | 103x36px | 36x36px |
+| Small | 95x30px | 30x30px |
+
+**States:** Default, Hover, Focused (with focus ring), Pressed, Disabled, Loading
+
+**Button Groups:** Side by side (343x48px), Stacked (343x104px)
+
+**Rules:**
+- One primary CTA per section
+- Labels name the outcome, not the action ("Save Changes" not "Submit")
+- Destructive actions use Negative variant with confirmation
+- Light and dark mode variants for all types
+
+---
+
+### Chips 3.0
+
+**Figma name:** `Chips 3.0`
+
+**Content types:** Icon + Text, Image + Text
+
+**States:** Active, Hover, Selected, Disabled
+
+**Size:** ~36px height. Width varies by content.
+
+---
+
+### Calendar / Date Picker 3.0
+
+**Figma names:** `Calendar`, `Date 3.0`
+
+**Types:** Date, Month, Year
+
+**Date cell states:** Default, Today, Hover, Selected (1 day), Selected (start), Selected (middle), Selected (end), Next month
+
+**Layout:** 343px width. Date view ~322px height. Month/Year views ~208px height.
+
+---
+
+### Banner Cards
+
+**Figma names:** `Carousel banner card 3.0`, `Square Promo 3.0`, `Vertical banner card 3.0`
+
+| Card Type | Dimensions | Notes |
+|---|---|---|
+| Carousel Banner | 343x170px | Optional background image |
+| Square Promo | 168x180px | Footer types: Illustration, Chart, Progress, Score, Image stack |
+| Vertical Banner | 343x~363px | Tall promotional card |
+
+**Light and dark mode variants for all card types.**
+
+---
+
+### Dialog 3.0
+
+**Figma name:** `Dialog 3.0`
+
+**Button layouts:** Single, Stacked, ~~Side by side~~ (DO NOT USE)
+
+**Layout:** 327px width. Height varies (270-503px).
+
+---
+
+### Dropdown 3.0
+
+**Figma name:** `Dropdown 3.0`
+
+**States:** Inactive, Active, Open (expanded list), Active-typing (search), Active-typing-no-results, Active-filled, Inactive-filled, Error-filled, Disabled-filled
+
+**Layout:** 343x80px (closed). Open state expands to ~380px.
+
+---
+
+### Navigation Bar 3.0
+
+**Figma name:** `Navigation Bar 3.0`
+
+**Types:** Title only, Icon, Button, Link, Search, Main Page, Media, Types8
+
+**Layout:** 375x56px.
+
+---
+
+### Full Header 3.0 / Modal Stack 3.0
+
+**Figma names:** `Full Header 3.0`, `Modal Stack 3.0`
+
+| Component | Dimensions | Use |
+|---|---|---|
+| Full Header | 375x180px | Screen header with back nav, title, actions |
+| Modal Stack | 375x204px | Header for modal/sheet context |
+
+---
+
+### Input 3.0
+
+**Figma name:** `Input 3.0`
+
+**States:** Inactive, Active, Filled, Error, Error-Filled, Disabled, Disabled-filled
+
+**Prepend icon variant:** All 7 states with leading icon.
+
+**Layout:** 343x80px (with label and helper text). 343x56px (compact).
+
+**Rules:**
+- Label above input, top-aligned
+- Label-to-input gap: 4-6px
+- Placeholder is format hint only, never the label
+- Real-time validation, not post-submission error walls
+
+---
+
+### Textarea 3.0
+
+**Figma name:** `Textarea 3.0`
+
+**States:** Inactive, Active, Filled, Error, Disabled, Disabled-filled
+
+**Layout:** 343px width. 128px (inactive), 148px (other states).
+
+---
+
+### Indicators & Badges
+
+| Component | Variants | Sizes |
+|---|---|---|
+| Indicator 3.0 | Dot, Number; Standard, Teal, Neutral colors | — |
+| Badge 3.0 | Standard/Success, Neutral, Error, Warning, Teal | S: 38x20px, M: 48x24px, L: 54x28px |
+| WOW Badge 3.0 | ML WOW, WOW only | — |
+
+**Badge options:** Icon Left, Icon Right
+
+---
+
+### Progress Indicators
+
+| Component | Types | Dimensions |
+|---|---|---|
+| Progress/Bar | Current, Completed, Not started | Animation: 0, 50, 75, 100 |
+| Progress/Linear | Determinate, Indeterminate, Buffer, Steps | 342x6px |
+| Progress/Circular | Default, Small | 32x32px, 20x20px |
+
+---
+
+### Additional Components
+
+| Component | Figma Name | Layout |
+|---|---|---|
+| Link 3.0 | `Link 3.0` | Sizes: S, M, L. Styles: Bold, Standard. States: Default, Hover, Clicked, Disabled. Icon: None, Leading, Appending |
+| Switch 3.0 | `Switch 3.0` | 48x48px touch target |
+| Tabs 3.0 | `Tabs 3.0` | 375x48px, horizontal scrollable |
+| List 3.0 | `List 3.0` | 375px width, 52-80px row height |
+| Sticky Note 3.0 | `Sticky note 3.0` | 375x138px |
+| Search | Full Header + Tabs + Results | Card: 343px width |
+
+---
+
+## Animation
+
+| Type | Duration | Notes |
+|---|---|---|
+| Micro-interactions | 100-150ms | Button press, toggle, checkbox |
+| Panels and expands | 200-300ms | Accordions, drawers, bottom sheets |
+| Closing | Faster than opening | Always |
+| Easing | Never linear | Except progress bars |
+| Reduced motion | Respect `prefers-reduced-motion` | Required |
+
+---
+
+## Accessibility
+
+| Standard | Requirement |
+|---|---|
+| Text contrast | 4.5:1 minimum (WCAG AA) |
+| Body text min size | 16px |
+| Color-only meaning | Never. Pair with icon, text, or position |
+| Touch targets | 44x44px (iOS) / 48x48dp (Android) |
+| Loading states | Skeleton screens, not spinners |
+| Focus indicators | Visible focus ring on all interactive elements |
+| Screen readers | All interactive elements need accessible labels |
+
+---
+
+## Figma Source Links
+
+| Resource | Link |
+|---|---|
+| MLDS 4.0 (full file) | [Figma](https://www.figma.com/design/SyfKKZyUM3cW4IunxIk8Bj/MLDS-4.0--Don-t-Use-fig) |
+| Color Tokens | [Figma node 2287:75919](https://www.figma.com/design/SyfKKZyUM3cW4IunxIk8Bj/MLDS-4.0--Don-t-Use-fig?node-id=2287-75919) |
+| Primitive Colors | [Figma node 2287:75920](https://www.figma.com/design/SyfKKZyUM3cW4IunxIk8Bj/MLDS-4.0--Don-t-Use-fig?node-id=2287-75920) |
+| Typography Scale | [Figma node 8264:2427](https://www.figma.com/design/SyfKKZyUM3cW4IunxIk8Bj/MLDS-4.0--Don-t-Use-fig?node-id=8264-2427) |
+| Accordion | [Overview](https://www.figma.com/design/SyfKKZyUM3cW4IunxIk8Bj/MLDS-4.0--Don-t-Use-fig?node-id=8623-28627) · [Usage](https://www.figma.com/design/SyfKKZyUM3cW4IunxIk8Bj/MLDS-4.0--Don-t-Use-fig?node-id=9016-79775) |
+| Banners | [Figma node 13460:15381](https://www.figma.com/design/SyfKKZyUM3cW4IunxIk8Bj/MLDS-4.0--Don-t-Use-fig?node-id=13460-15381) |
+| Lifecycle Banner | [Figma node 40003161:101764](https://www.figma.com/design/SyfKKZyUM3cW4IunxIk8Bj/MLDS-4.0--Don-t-Use-fig?node-id=40003161-101764) |
+| Bottom Nav Bar | [Figma node 16212:19924](https://www.figma.com/design/SyfKKZyUM3cW4IunxIk8Bj/MLDS-4.0--Don-t-Use-fig?node-id=16212-19924) |
+| Buttons | [Figma node 10836:54768](https://www.figma.com/design/SyfKKZyUM3cW4IunxIk8Bj/MLDS-4.0--Don-t-Use-fig?node-id=10836-54768) |
+| Chips & Calendar | [Figma node 20766:29840](https://www.figma.com/design/SyfKKZyUM3cW4IunxIk8Bj/MLDS-4.0--Don-t-Use-fig?node-id=20766-29840) |
+| Banner Cards | [Figma node 1695:44926](https://www.figma.com/design/SyfKKZyUM3cW4IunxIk8Bj/MLDS-4.0--Don-t-Use-fig?node-id=1695-44926) |
+| Chips Overview | [Figma node 11059:15281](https://www.figma.com/design/SyfKKZyUM3cW4IunxIk8Bj/MLDS-4.0--Don-t-Use-fig?node-id=11059-15281) |
+| Dialogs | [Figma node 3187:81422](https://www.figma.com/design/SyfKKZyUM3cW4IunxIk8Bj/MLDS-4.0--Don-t-Use-fig?node-id=3187-81422) |
+| Dropdowns | [Figma node 16612:8017](https://www.figma.com/design/SyfKKZyUM3cW4IunxIk8Bj/MLDS-4.0--Don-t-Use-fig?node-id=16612-8017) |
+| Navigation Bar | [Figma node 3639:96668](https://www.figma.com/design/SyfKKZyUM3cW4IunxIk8Bj/MLDS-4.0--Don-t-Use-fig?node-id=3639-96668) |
+| Full Header / Modal | [Figma node 3639:96695](https://www.figma.com/design/SyfKKZyUM3cW4IunxIk8Bj/MLDS-4.0--Don-t-Use-fig?node-id=3639-96695) |
+| Indicators & Badges | [Figma node 2005:58657](https://www.figma.com/design/SyfKKZyUM3cW4IunxIk8Bj/MLDS-4.0--Don-t-Use-fig?node-id=2005-58657) |
+| Inputs & Textarea | [Figma node 16222:24152](https://www.figma.com/design/SyfKKZyUM3cW4IunxIk8Bj/MLDS-4.0--Don-t-Use-fig?node-id=16222-24152) |
+| Links & Search | [Figma node 8661:9942](https://www.figma.com/design/SyfKKZyUM3cW4IunxIk8Bj/MLDS-4.0--Don-t-Use-fig?node-id=8661-9942) |
+
+---
+
+## Gaps — Requires Figma Verification
+
+These items are missing from the extracted reference and should be added when available:
+
+- [ ] Neutral-500 and Neutral-600 hex values
+- [ ] Green primitive palette (full 100-1000 ramp) — blocks accurate positive/success states
+- [ ] Purple palette deprecation status — confirms whether to use in new work
+- [ ] Gradient stop definitions (start/end colors, angle)
+- [ ] Elevation/shadow tokens (exact values for card, modal, dropdown, tooltip)
+- [ ] Border radius tokens (exact per-component values)
+- [ ] Icon library name, CDN, and sizing conventions
+- [ ] Letter spacing values per type style (currently noted as -1 to -3 generally)
+- [ ] Components not yet extracted: Toggle, Tooltip, Toast/Snackbar, Skeleton, Sheet/Bottom Sheet, Segmented Control, Stepper, Pagination
