@@ -1,7 +1,7 @@
 # Cash Flow — Build Phases
 
 > **Purpose:** Working reference for design and build order. Update status markers as each phase completes.
-> **Last updated:** April 9, 2026 (Phases 1–6 complete + Confidence/Paycheck patch)
+> **Last updated:** April 9, 2026 (Phases 1–7 complete + Confidence/Paycheck patch)
 > **Owner:** Jaf Inas / PFM Team
 
 ---
@@ -38,6 +38,8 @@ All decisions below are confirmed. No further alignment needed before building.
 | D14 | Credit card accounts: excluded from total balance calculation. |
 | D15 | Savings accounts: included in total balance (net worth context) but excluded from STS calculation. |
 | D16 | Missing transactions (balance refreshed, transactions lagging): per-account freshness timestamp + "Some recent activity may not be reflected yet" messaging. |
+| D17 | Post-BV manual obligations are limited to fixed recurring commitments (rent, loans, subscriptions, insurance). Linked data remains the primary source; manual entries are user-confirmed exceptions. |
+| D18 | Live STS is deferred to a mature phase and only applies to BV-linked users with high confidence. v1 stays snapshot-based with freshness/confidence messaging. |
 
 ---
 
@@ -377,7 +379,7 @@ All decisions below are confirmed. No further alignment needed before building.
 
 ---
 
-## Phase 7 — Cross-Cutting States and Settings 🟡 ⬜
+## Phase 7 — Cross-Cutting States and Settings 🟡 ✅
 
 **Why seventh:** Depends on all screens being complete, since it stitches them together and provides the settings surface that multiple screens reference.
 
@@ -385,29 +387,33 @@ All decisions below are confirmed. No further alignment needed before building.
 
 **Estimated effort:** 1–2 sessions
 
+### What was built
+
 ### Settings surface: Cash Flow settings
-- Entry: Settings > Cash Flow
+- New screen: `"cf-settings"` with entry from Cash Flow nav (gear icon) ✅
 - Items:
-  - "Improve your accuracy" — BV-link prompt for manual users who have dismissed it (D1)
-  - "Review your bills" — shortcut to bill review for linked users who want to audit
-  - "Manual entries" — archive of pre-link manual data for users who have transitioned (D2)
+  - "Improve your accuracy" — routes to link-bank for manual/partial users (D1 path) ✅
+  - "Review your bills" — routes to bill-review for linked users ✅
+  - "Manual entries" — availability tied to carried manual obligations from reconciliation (D2) ✅
 
 ### Per-account freshness display
-- Each linked account in the CF balance breakdown shows "Last updated [time]"
-- If any account > freshness threshold: per-account stale indicator appears inline
+- Added "Linked account freshness" card on Cash Flow linked/partial profiles ✅
+- Each account row shows "Last updated [time]" ✅
+- Inline freshness chip per account: `Fresh` / `Stale` based on overlay/staleness state ✅
 
 ### Joint account disclosure (D8)
-- Persistent "Joint account" badge on affected account row
-- Note in "Why this number" section if joint balance is included in STS
+- Persistent "Joint account" badge remains on balance row ✅
+- Added note in "How we got this number" when joint balance share is included ✅
 
 ### Notification placeholder states (pending O5)
-- "Low balance alert" push notification UI treatment
-- "Upcoming bill in 2 days" push notification UI treatment
-- Placeholder only — no live logic until O5 resolved
+- Added placeholder preview cards in settings:
+  - "Low balance alert"
+  - "Upcoming bill in 2 days"
+- Explicit "preview only" note retained until O5 legal sign-off ✅
 
 ### Dependencies
-- All previous phases must be complete
-- O5 (notification legal sign-off) — placeholder states built now, finalized after O5
+- All previous phases complete ✅
+- O5 (notification legal sign-off) still open; placeholders intentionally non-functional ✅
 
 ---
 
@@ -445,6 +451,11 @@ All decisions below are confirmed. No further alignment needed before building.
 ### Metrics instrumentation (pending O6)
 - Instrument: first-time STS view, bill review completion rate, BV-link conversion from manual prompt, reconnect completion rate
 - Anti-metrics: "number is wrong" flags, manual override frequency, prompt dismissal rate
+
+### Future-state guardrails (locked now, build later)
+- Live transaction-reactive STS is out of v1 scope and gated to BV-linked + high confidence users only (D18)
+- If confidence drops below high (stale/reconnect/missing paycheck), STS reverts to snapshot mode with explicit messaging
+- Manual post-link obligations remain fixed recurring entries first; future auto-detection may suggest merge/replace, never silent overwrite (D17)
 
 ---
 

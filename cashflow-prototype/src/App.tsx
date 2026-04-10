@@ -27,6 +27,7 @@ const T = {
 type Screen =
   | "accounts" | "splash"
   | "link-bank" | "link-connecting" | "joint-account" | "bill-review" | "paycheck-confirm" | "reconciliation"
+  | "cf-settings"
   | "manual-paycheck" | "manual-bills"
   | "cashflow";
 
@@ -1181,6 +1182,85 @@ function JointAccountScreen({ bank, onConfirm }: { bank: string; onConfirm: (sha
 }
 
 /* ═══════════════════════════════════════════════════════════════════
+   SCREEN 5A — CASH FLOW SETTINGS (PHASE 7)
+═══════════════════════════════════════════════════════════════════ */
+function CashFlowSettingsScreen({
+  accountState, carriedManualObligations, onBack, onImproveAccuracy, onReviewBills, onManualEntries,
+}: {
+  accountState: AccountState;
+  carriedManualObligations: number;
+  onBack: () => void;
+  onImproveAccuracy: () => void;
+  onReviewBills: () => void;
+  onManualEntries: () => void;
+}) {
+  const isLinked = accountState === "bv-linked";
+  const canImproveAccuracy = accountState === "manual-only" || accountState === "roarmoney-only" || accountState === "roarmoney-dd";
+  const manualArchiveAvailable = carriedManualObligations > 0;
+
+  const rowStyle: React.CSSProperties = {
+    background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 14, padding: "12px 14px",
+    display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
+  };
+
+  return (
+    <div>
+      <NavBar title="Cash Flow settings" onBack={onBack} />
+      <div style={{ padding:"4px 16px 28px", display:"grid", gap:12 }}>
+        <div style={rowStyle}>
+          <div>
+            <p style={{ margin:0, fontSize:14, fontWeight:600 }}>Improve your accuracy</p>
+            <p style={{ margin:"2px 0 0", fontSize:12, color:T.text3 }}>
+              {canImproveAccuracy ? "Link external accounts for a fuller picture." : "Already linked. Manage connected accounts in future settings."}
+            </p>
+          </div>
+          <button onClick={canImproveAccuracy ? onImproveAccuracy : undefined} style={{ height:34, border:`1px solid ${canImproveAccuracy ? T.tealDark : T.border}`, borderRadius:999, background:"transparent", color: canImproveAccuracy ? T.tealDark : T.text3, fontSize:12, fontWeight:600, cursor: canImproveAccuracy ? "pointer" : "default", fontFamily:"inherit", padding:"0 12px" }}>
+            {canImproveAccuracy ? "Link now" : "Done"}
+          </button>
+        </div>
+
+        <div style={rowStyle}>
+          <div>
+            <p style={{ margin:0, fontSize:14, fontWeight:600 }}>Review your bills</p>
+            <p style={{ margin:"2px 0 0", fontSize:12, color:T.text3 }}>Audit recurring items and update confirmations.</p>
+          </div>
+          <button onClick={isLinked ? onReviewBills : undefined} style={{ height:34, border:`1px solid ${isLinked ? T.tealDark : T.border}`, borderRadius:999, background:"transparent", color: isLinked ? T.tealDark : T.text3, fontSize:12, fontWeight:600, cursor: isLinked ? "pointer" : "default", fontFamily:"inherit", padding:"0 12px" }}>
+            Review
+          </button>
+        </div>
+
+        <div style={rowStyle}>
+          <div>
+            <p style={{ margin:0, fontSize:14, fontWeight:600 }}>Manual entries</p>
+            <p style={{ margin:"2px 0 0", fontSize:12, color:T.text3 }}>
+              {manualArchiveAvailable
+                ? `${carriedManualObligations} archived manual obligation${carriedManualObligations > 1 ? "s" : ""} available`
+                : "No archived manual entries yet"}
+            </p>
+          </div>
+          <button onClick={manualArchiveAvailable ? onManualEntries : undefined} style={{ height:34, border:`1px solid ${manualArchiveAvailable ? T.tealDark : T.border}`, borderRadius:999, background:"transparent", color: manualArchiveAvailable ? T.tealDark : T.text3, fontSize:12, fontWeight:600, cursor: manualArchiveAvailable ? "pointer" : "default", fontFamily:"inherit", padding:"0 12px" }}>
+            Open
+          </button>
+        </div>
+
+        <div style={{ background:T.bgCard, border:`1px solid ${T.border}`, borderRadius:16, padding:"14px 14px", display:"grid", gap:10 }}>
+          <p style={{ margin:0, fontSize:12, color:T.text3, fontWeight:600, letterSpacing:"0.4px" }}>NOTIFICATION PREVIEW (PLACEHOLDER)</p>
+          <div style={{ background:T.bgPage, border:`1px solid ${T.border}`, borderRadius:12, padding:"10px 12px" }}>
+            <p style={{ margin:0, fontSize:13, fontWeight:600 }}>Low balance alert</p>
+            <p style={{ margin:"2px 0 0", fontSize:12, color:T.text3 }}>“You may run low before payday. Check your Cash Flow now.”</p>
+          </div>
+          <div style={{ background:T.bgPage, border:`1px solid ${T.border}`, borderRadius:12, padding:"10px 12px" }}>
+            <p style={{ margin:0, fontSize:13, fontWeight:600 }}>Upcoming bill in 2 days</p>
+            <p style={{ margin:"2px 0 0", fontSize:12, color:T.text3 }}>“Phone bill due soon. You still have enough set aside.”</p>
+          </div>
+          <p style={{ margin:0, fontSize:11, color:T.text3 }}>Preview only — final channel/legal rules pending O5.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
    SCREEN 5 — CASH FLOW FEATURE
 ═══════════════════════════════════════════════════════════════════ */
 function LinkBankPrompt({ accountState, onLinkBank }: { accountState: AccountState; onLinkBank: () => void }) {
@@ -1235,10 +1315,10 @@ function LinkBankPrompt({ accountState, onLinkBank }: { accountState: AccountSta
 }
 
 function CashFlowScreen({
-  accountState, risk, linkedOverlay, linkedIncomeStatus, carriedManualObligations, isJointAccount, jointShare, onBack, onLinkBank,
+  accountState, risk, linkedOverlay, linkedIncomeStatus, carriedManualObligations, isJointAccount, jointShare, onBack, onLinkBank, onOpenSettings,
 }: {
   accountState:AccountState; risk:RiskLevel; linkedOverlay:LinkedOverlay; linkedIncomeStatus:LinkedIncomeStatus;
-  carriedManualObligations:number; isJointAccount:boolean; jointShare:number|null; onBack:()=>void; onLinkBank:()=>void;
+  carriedManualObligations:number; isJointAccount:boolean; jointShare:number|null; onBack:()=>void; onLinkBank:()=>void; onOpenSettings:()=>void;
 }) {
   const profile =
     accountState === "manual-only" ? "manual"
@@ -1260,9 +1340,29 @@ function CashFlowScreen({
     : profile === "linked" ? "Medium confidence"
     : m.confidence;
 
+  const freshnessRows = profile === "manual"
+    ? []
+    : accountState === "bv-linked"
+      ? [
+          { id:"rm", name:"RoarMoney checking", updated:"Today, 11:42 AM", stale:false },
+          { id:"ex-check", name:"Chase checking", updated: isMissingTx ? "Today, 8:04 AM" : "Today, 11:39 AM", stale: isReconnect || m.stale || isMissingTx },
+          { id:"ex-save", name:"Ally savings", updated:"Today, 9:12 AM", stale:false },
+        ]
+      : [
+          { id:"rm", name:"RoarMoney checking", updated:"Today, 11:42 AM", stale:m.stale },
+        ];
+
   return (
     <div>
-      <NavBar title="Cash Flow" onBack={onBack} />
+      <NavBar
+        title="Cash Flow"
+        onBack={onBack}
+        right={
+          <button onClick={onOpenSettings} style={{ width:44, height:44, background:"none", border:"none", cursor:"pointer", fontSize:18, color:T.text1 }}>
+            ⚙︎
+          </button>
+        }
+      />
       <div style={{ padding:"4px 16px 28px", display:"grid", gap:12 }}>
 
         {/* Reconnect needed — top-of-screen persistent alert (D13) */}
@@ -1405,6 +1505,11 @@ function CashFlowScreen({
                   </div>
                 </div>
               ))}
+              {isJointAccount && (
+                <p style={{ margin:"2px 0 0", fontSize:12, color:T.text3, lineHeight:"18px" }}>
+                  Joint account balance is included in this calculation ({jointShare !== null ? `${jointShare}% share` : "full balance"}).
+                </p>
+              )}
               {/* Savings informational row — visible in breakdown but not in STS (D15) */}
               {m.savings !== undefined && m.savings > 0 && (
                 <div style={{ background:T.bgAccent, borderRadius:10, padding:"8px 12px", display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:2 }}>
@@ -1422,6 +1527,25 @@ function CashFlowScreen({
             <p style={{ margin:0, fontSize:13, color:T.text2 }}>
               Includes <strong>{carriedManualObligations}</strong> user-confirmed manual obligation{carriedManualObligations > 1 ? "s" : ""} that were not matched in linked data.
             </p>
+          </div>
+        )}
+
+        {profile !== "manual" && (
+          <div style={{ background:T.bgCard, border:`1px solid ${T.border}`, borderRadius:20, padding:20, display:"grid", gap:10 }}>
+            <h2 style={{ margin:0, fontSize:16, fontWeight:600, letterSpacing:"-0.3px" }}>Linked account freshness</h2>
+            {freshnessRows.map(row => (
+              <div key={row.id} style={{ background:T.bgPage, border:`1px solid ${T.border}`, borderRadius:12, padding:"10px 12px", display:"flex", justifyContent:"space-between", alignItems:"center", gap:12 }}>
+                <div>
+                  <p style={{ margin:0, fontSize:14, fontWeight:600 }}>{row.name}</p>
+                  <p style={{ margin:"2px 0 0", fontSize:12, color:T.text3 }}>Last updated {row.updated}</p>
+                </div>
+                {row.stale ? (
+                  <span style={{ fontSize:10, fontWeight:600, color:T.yellow, background:T.bgWarning, borderRadius:999, padding:"3px 8px" }}>Stale</span>
+                ) : (
+                  <span style={{ fontSize:10, fontWeight:600, color:T.tealDark, background:T.bgAccent, borderRadius:999, padding:"3px 8px" }}>Fresh</span>
+                )}
+              </div>
+            ))}
           </div>
         )}
 
@@ -1505,6 +1629,7 @@ const SCREEN_LABELS: Record<Screen, string> = {
   "bill-review":      "Bill review",
   "paycheck-confirm": "Paycheck confirm",
   "reconciliation":   "Reconciliation",
+  "cf-settings":      "CF settings",
   "manual-paycheck":  "Manual: paycheck",
   "manual-bills":     "Manual: bills",
   "cashflow":         "Cash Flow",
@@ -1687,9 +1812,10 @@ export default function App() {
             {screen === "bill-review"     && <BillReviewScreen simulateLowHistory={simulateLowHistory} onBack={()=>go("link-connecting")} onComplete={handleBillReviewComplete} />}
             {screen === "paycheck-confirm"&& <PaycheckConfirmScreen signal={paycheckSignal} onBack={()=>go("bill-review")} onConfirmDetected={handleIncomeDetectedConfirm} onUseManual={handleIncomeManualConfirm} onUseDirectDeposit={handleIncomeDDConfirm} />}
             {screen === "reconciliation"  && <ReconciliationScreen onBack={()=>go("paycheck-confirm")} onComplete={handleReconciliationComplete} />}
+            {screen === "cf-settings"     && <CashFlowSettingsScreen accountState={accountState} carriedManualObligations={carriedManualObligations} onBack={()=>go("cashflow")} onImproveAccuracy={()=>go("link-bank")} onReviewBills={()=>go("bill-review")} onManualEntries={()=>go("reconciliation")} />}
             {screen === "manual-paycheck" && <ManualPaycheckScreen onBack={()=>go("splash")} onContinue={()=>go("manual-bills")} />}
             {screen === "manual-bills"    && <ManualBillsScreen  onBack={()=>go("manual-paycheck")} onDone={handleManualDone} />}
-            {screen === "cashflow"        && <CashFlowScreen     accountState={accountState} risk={risk} linkedOverlay={linkedOverlay} linkedIncomeStatus={linkedIncomeStatus} carriedManualObligations={carriedManualObligations} isJointAccount={isJointAccount} jointShare={jointShare} onBack={()=>go("accounts")} onLinkBank={()=>go("link-bank")} />}
+            {screen === "cashflow"        && <CashFlowScreen     accountState={accountState} risk={risk} linkedOverlay={linkedOverlay} linkedIncomeStatus={linkedIncomeStatus} carriedManualObligations={carriedManualObligations} isJointAccount={isJointAccount} jointShare={jointShare} onBack={()=>go("accounts")} onLinkBank={()=>go("link-bank")} onOpenSettings={()=>go("cf-settings")} />}
           </div>
 
           {/* Home indicator */}
