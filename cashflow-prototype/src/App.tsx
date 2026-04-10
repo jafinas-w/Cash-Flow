@@ -667,11 +667,18 @@ function ManualBillsScreen({ onBack, onDone }: { onBack:()=>void; onDone:()=>voi
 /* ═══════════════════════════════════════════════════════════════════
    SCREEN 4B-GATE — BILL REVIEW (D6, D7)
 ═══════════════════════════════════════════════════════════════════ */
-function BillReviewScreen({ simulateLowHistory, onBack, onComplete }: {
-  simulateLowHistory: boolean; onBack: () => void; onComplete: () => void;
+function BillReviewScreen({ simulateLowHistory, needsReconciliation, onBack, onComplete }: {
+  simulateLowHistory: boolean; needsReconciliation: boolean; onBack: () => void; onComplete: (keptUnmatchedManual: number) => void;
 }) {
-  const [items, setItems]         = useState<DetectedItem[]>(INITIAL_DETECTED);
+  const [items, setItems]         = useState<DetectedItem[]>(() => {
+    if (!needsReconciliation) return INITIAL_DETECTED;
+    const detectedAdds = INITIAL_RECON_ROWS
+      .filter(r => r.type === "new-detected")
+      .map(r => ({ id: `det-${r.id}`, label: r.label, amount: r.detectedAmount ?? 0, frequency: "Monthly", confirmed: false } as DetectedItem));
+    return [...INITIAL_DETECTED, ...detectedAdds];
+  });
   const [removed, setRemoved]     = useState<DetectedItem[]>([]);
+  const [reconRows, setReconRows] = useState<ReconRow[]>(() => INITIAL_RECON_ROWS.filter(r => r.type !== "new-detected"));
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editLabel, setEditLabel] = useState("");
   const [editAmt,   setEditAmt]   = useState("");
@@ -680,7 +687,11 @@ function BillReviewScreen({ simulateLowHistory, onBack, onComplete }: {
   const [newAmt,    setNewAmt]    = useState("");
 
   const confirmedCount = items.filter(i => i.confirmed).length;
-  const canProceed     = confirmedCount > 0;
+  const allReconResolved = reconRows.every(r => !!r.decision);
+  const keptUnmatchedManual = reconRows.filter(r => r.type === "unmatched-manual" && r.decision === "keep").length;
+  const canProceed     = confirmedCount > 0 && (!needsReconciliation || allReconResolved);
+  const conflictRowForItem = (item: DetectedItem) =>
+    reconRows.find(r => r.type === "conflict" && r.label.toLowerCase() === item.label.toLowerCase());
 
   const confirmItem = (id: string) => setItems(p => p.map(i => i.id === id ? { ...i, confirmed: true } : i));
   const removeItem  = (id: string) => {
@@ -707,6 +718,8 @@ function BillReviewScreen({ simulateLowHistory, onBack, onComplete }: {
     setItems(p => [...p, { id:`u-${Date.now()}`, label:newLabel, amount:parseFloat(newAmt)||0, frequency:"Monthly", confirmed:true, userAdded:true }]);
     setNewLabel(""); setNewAmt(""); setShowAdd(false);
   };
+  const setReconDecision = (id: string, decision: ReconDecision) =>
+    setReconRows(prev => prev.map(r => r.id === id ? { ...r, decision } : r));
 
   const rowBase: React.CSSProperties = { borderRadius:14, padding:"12px 14px", display:"grid", gap:8, transition:"all 120ms ease" };
 
@@ -763,6 +776,7 @@ function BillReviewScreen({ simulateLowHistory, onBack, onComplete }: {
               </div>
             );
 
+            const conflictRow = needsReconciliation ? conflictRowForItem(item) : undefined;
             return (
               <div key={item.id} style={{ ...rowBase, background: isConfirmed ? T.bgAccent : T.bgCard, border:`1.5px solid ${isConfirmed ? T.tealDark : T.border}` }}>
                 <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
@@ -792,6 +806,40 @@ function BillReviewScreen({ simulateLowHistory, onBack, onComplete }: {
                     <button onClick={()=>removeItem(item.id)} style={{ width:28, height:28, borderRadius:999, border:"none", background:"rgba(206,41,63,0.08)", color:T.red, fontSize:14, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"inherit" }}>×</button>
                   </div>
                 </div>
+
+                {conflictRow && (
+                  <div style={{ background:T.bgPage, border:`1px solid ${T.border}`, borderRadius:10, padding:"10px 12px", display:"grid", gap:8 }}>
+                    <p style={{ margin:0, fontSize:12, color:T.text3 }}>Manual vs detected comparison</p>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:10 }}>
+                      <span style={{ fontSize:12, color:T.text3 }}>Manual input</span>
+                      <span style={{ fontSize:13, fontWeight:600, color:T.text2 }}>{fmt(conflictRow.manualAmount ?? 0)}</span>
+                    </div>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:10 }}>
+                      <span style={{ fontSize:12, color:T.text3 }}>Detected recurring</span>
+                      <span style={{ fontSize:13, fontWeight:600, color:T.tealDark }}>{fmt(conflictRow.detectedAmount ?? 0)}</span>
+                    </div>
+                    <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                      <button
+                        onClick={() => {
+                          setReconDecision(conflictRow.id, "use-detected");
+                          setItems(prev => prev.map(i => i.id === item.id ? { ...i, amount: conflictRow.detectedAmount ?? i.amount } : i));
+                        }}
+                        style={{ height:32, padding:"0 12px", borderRadius:999, cursor:"pointer", border:`1.5px solid ${T.tealDark}`, background: conflictRow.decision==="use-detected" ? T.bgAccent : "#F1FFFC", color:T.tealDark, fontSize:12, fontWeight:600, fontFamily:"inherit" }}
+                      >
+                        Take over with detected
+                      </button>
+                      <button
+                        onClick={() => {
+                          setReconDecision(conflictRow.id, "keep-mine");
+                          setItems(prev => prev.map(i => i.id === item.id ? { ...i, amount: conflictRow.manualAmount ?? i.amount } : i));
+                        }}
+                        style={{ height:32, padding:"0 12px", borderRadius:999, cursor:"pointer", border:`1.5px solid ${conflictRow.decision==="keep-mine" ? T.tealDark : T.border}`, background: conflictRow.decision==="keep-mine" ? T.bgAccent : T.bgCard, color:conflictRow.decision==="keep-mine" ? T.tealDark : T.text2, fontSize:12, fontWeight:600, fontFamily:"inherit" }}
+                      >
+                        Keep manual
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Unconfirmed CTA */}
                 {!isConfirmed && (
@@ -852,16 +900,40 @@ function BillReviewScreen({ simulateLowHistory, onBack, onComplete }: {
           <span style={{ fontSize:12, color:T.text3, whiteSpace:"nowrap" }}>{confirmedCount} of {items.length} confirmed</span>
         </div>
 
+        {needsReconciliation && (
+          <div style={{ display:"grid", gap:10 }}>
+            <div style={{ background:T.bgAccent, border:`1px solid ${T.border}`, borderRadius:14, padding:"10px 12px" }}>
+              <p style={{ margin:0, fontSize:13, color:T.tealDark, fontWeight:600 }}>
+                Manual to linked migration: confirm detected recurring first, then decide unmatched manual obligations.
+              </p>
+            </div>
+            {reconRows.filter(r => r.type === "unmatched-manual").map(row => (
+              <div key={row.id} style={{ background:T.bgCard, border:`1px solid ${T.border}`, borderRadius:14, padding:"12px 14px", display:"grid", gap:8 }}>
+                <p style={{ margin:0, fontSize:14, fontWeight:600 }}>{row.label}</p>
+                <p style={{ margin:0, fontSize:13, color:T.text2 }}>Manual amount: <strong>{fmt(row.manualAmount ?? 0)}</strong> · Not found in detected recurring data.</p>
+                <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                  <button onClick={()=>setReconDecision(row.id, "keep")} style={{ height:34, padding:"0 12px", borderRadius:999, cursor:"pointer", border:`1.5px solid ${row.decision==="keep" ? T.tealDark : T.border}`, background: row.decision==="keep" ? T.bgAccent : T.bgCard, color:row.decision==="keep" ? T.tealDark : T.text2, fontSize:12, fontWeight:600, fontFamily:"inherit" }}>Keep as manual obligation</button>
+                  <button onClick={()=>setReconDecision(row.id, "remove")} style={{ height:34, padding:"0 12px", borderRadius:999, cursor:"pointer", border:`1.5px solid ${row.decision==="remove" ? T.tealDark : T.border}`, background: row.decision==="remove" ? T.bgAccent : T.bgCard, color:row.decision==="remove" ? T.tealDark : T.text2, fontSize:12, fontWeight:600, fontFamily:"inherit" }}>Remove</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* CTA — gated on at least 1 confirmed */}
         <div style={{ display:"grid", gap:8 }}>
           <button
-            onClick={canProceed ? onComplete : undefined}
+            onClick={canProceed ? () => onComplete(needsReconciliation ? keptUnmatchedManual : 0) : undefined}
             style={{ height:52, border:"none", borderRadius:999, background: canProceed ? T.tealDark : T.border, color: canProceed ? "#FFF" : T.text3, fontWeight:600, fontSize:15, cursor: canProceed ? "pointer" : "default", fontFamily:"inherit", transition:"all 120ms ease" }}
           >
             Looks right, show my Cash Flow →
           </button>
           {!canProceed && (
-            <p style={{ margin:0, fontSize:12, color:T.text3, textAlign:"center" }}>Confirm at least one bill to continue.</p>
+            <p style={{ margin:0, fontSize:12, color:T.text3, textAlign:"center" }}>
+              {needsReconciliation
+                ? "Confirm at least one bill and finish all migration decisions to continue."
+                : "Confirm at least one bill to continue."}
+            </p>
           )}
         </div>
 
@@ -985,21 +1057,23 @@ function ReconciliationScreen({
   const setDecision = (id: string, decision: ReconDecision) => setRows(prev => prev.map(r => r.id === id ? { ...r, decision } : r));
   const allResolved = rows.every(r => !!r.decision);
   const keptUnmatchedManual = rows.filter(r => r.type === "unmatched-manual" && r.decision === "keep").length;
+  const detectedRows = rows.filter(r => r.type !== "unmatched-manual");
+  const manualOnlyRows = rows.filter(r => r.type === "unmatched-manual");
 
   const ChoiceBtn = ({
-    active, label, onClick,
+    active, label, onClick, recommended,
   }: {
-    active: boolean; label: string; onClick: () => void;
+    active: boolean; label: string; onClick: () => void; recommended?: boolean;
   }) => (
     <button
       onClick={onClick}
       style={{
         height: 34, padding: "0 12px", borderRadius: 999, cursor: "pointer",
-        border: `1.5px solid ${active ? T.tealDark : T.border}`,
-        background: active ? T.bgAccent : T.bgCard,
+        border: `1.5px solid ${active ? T.tealDark : recommended ? T.tealDark : T.border}`,
+        background: active ? T.bgAccent : recommended ? "#F1FFFC" : T.bgCard,
         color: active ? T.tealDark : T.text2, fontSize: 12, fontWeight: 600, fontFamily: "inherit",
       }}
-    >{label}</button>
+    >{label}{recommended ? " (recommended)" : ""}</button>
   );
 
   return (
@@ -1009,54 +1083,63 @@ function ReconciliationScreen({
         <div style={{ display:"grid", gap:6 }}>
           <h1 style={{ margin:0, fontSize:22, lineHeight:"30px", fontWeight:600, letterSpacing:"-0.5px" }}>Let's check what changed</h1>
           <p style={{ margin:0, fontSize:14, color:T.text2, lineHeight:"20px" }}>
-            We compared what you entered with what we found. Review any differences.
+            We compared your manual entries with detected recurring payments. Confirm everything in one pass.
+          </p>
+        </div>
+
+        <div style={{ background:T.bgAccent, border:`1px solid ${T.border}`, borderRadius:14, padding:"10px 12px" }}>
+          <p style={{ margin:0, fontSize:13, color:T.tealDark, fontWeight:600 }}>
+            Detected recurring payments are prioritized below. Use "Take over" where possible to move to linked-first tracking.
           </p>
         </div>
 
         <div style={{ display:"grid", gap:10 }}>
-          {rows.map(row => (
-            <div key={row.id} style={{ background:T.bgCard, border:`1px solid ${T.border}`, borderRadius:14, padding:"12px 14px", display:"grid", gap:8 }}>
-              {row.type === "conflict" && (
-                <>
-                  <p style={{ margin:0, fontSize:14, fontWeight:600 }}>{row.label}</p>
-                  <p style={{ margin:0, fontSize:13, color:T.text2 }}>
-                    You entered: <strong>{fmt(row.manualAmount ?? 0)}</strong> · We found: <strong>{fmt(row.detectedAmount ?? 0)}</strong>
-                  </p>
-                  <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-                    <ChoiceBtn active={row.decision==="keep-mine"} label="Keep mine" onClick={()=>setDecision(row.id, "keep-mine")} />
-                    <ChoiceBtn active={row.decision==="use-detected"} label="Use detected" onClick={()=>setDecision(row.id, "use-detected")} />
-                  </div>
-                </>
-              )}
-
-              {row.type === "unmatched-manual" && (
-                <>
-                  <p style={{ margin:0, fontSize:14, fontWeight:600 }}>{row.label}</p>
-                  <p style={{ margin:0, fontSize:13, color:T.text2 }}>
-                    We did not find this in linked activity. Keep as an obligation?
-                  </p>
-                  <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-                    <ChoiceBtn active={row.decision==="keep"} label="Keep" onClick={()=>setDecision(row.id, "keep")} />
-                    <ChoiceBtn active={row.decision==="remove"} label="Remove" onClick={()=>setDecision(row.id, "remove")} />
-                  </div>
-                </>
-              )}
-
-              {row.type === "new-detected" && (
-                <>
-                  <p style={{ margin:0, fontSize:14, fontWeight:600 }}>{row.label}</p>
-                  <p style={{ margin:0, fontSize:13, color:T.text2 }}>
-                    We found this recurring payment: <strong>{fmt(row.detectedAmount ?? 0)}</strong>. Add it?
-                  </p>
-                  <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-                    <ChoiceBtn active={row.decision==="add"} label="Add" onClick={()=>setDecision(row.id, "add")} />
-                    <ChoiceBtn active={row.decision==="skip"} label="Skip" onClick={()=>setDecision(row.id, "skip")} />
-                  </div>
-                </>
-              )}
+          {detectedRows.map(row => (
+            <div key={row.id} style={{ background:T.bgCard, border:`1px solid ${T.border}`, borderRadius:14, padding:"12px 14px", display:"grid", gap:10 }}>
+              <p style={{ margin:0, fontSize:14, fontWeight:600 }}>{row.label}</p>
+              <div style={{ display:"grid", gap:6 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:10 }}>
+                  <span style={{ fontSize:12, color:T.text3 }}>Manual input</span>
+                  <span style={{ fontSize:13, fontWeight:600, color:T.text2 }}>{row.manualAmount !== undefined ? fmt(row.manualAmount) : "Not found"}</span>
+                </div>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:10 }}>
+                  <span style={{ fontSize:12, color:T.text3 }}>Detected recurring</span>
+                  <span style={{ fontSize:13, fontWeight:600, color:T.tealDark }}>{row.detectedAmount !== undefined ? fmt(row.detectedAmount) : "Not found"}</span>
+                </div>
+              </div>
+              <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                {row.type === "conflict" && (
+                  <>
+                    <ChoiceBtn active={row.decision==="use-detected"} label="Take over with detected" recommended onClick={()=>setDecision(row.id, "use-detected")} />
+                    <ChoiceBtn active={row.decision==="keep-mine"} label="Keep manual" onClick={()=>setDecision(row.id, "keep-mine")} />
+                  </>
+                )}
+                {row.type === "new-detected" && (
+                  <>
+                    <ChoiceBtn active={row.decision==="add"} label="Take over and add" recommended onClick={()=>setDecision(row.id, "add")} />
+                    <ChoiceBtn active={row.decision==="skip"} label="Skip for now" onClick={()=>setDecision(row.id, "skip")} />
+                  </>
+                )}
+              </div>
             </div>
           ))}
         </div>
+
+        {manualOnlyRows.length > 0 && (
+          <div style={{ display:"grid", gap:10 }}>
+            <p style={{ margin:0, fontSize:13, fontWeight:600, color:T.text2 }}>Manual obligations not found in detected recurring data</p>
+            {manualOnlyRows.map(row => (
+              <div key={row.id} style={{ background:T.bgCard, border:`1px solid ${T.border}`, borderRadius:14, padding:"12px 14px", display:"grid", gap:8 }}>
+                <p style={{ margin:0, fontSize:14, fontWeight:600 }}>{row.label}</p>
+                <p style={{ margin:0, fontSize:13, color:T.text2 }}>Manual amount: <strong>{fmt(row.manualAmount ?? 0)}</strong></p>
+                <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                  <ChoiceBtn active={row.decision==="keep"} label="Keep as manual obligation" onClick={()=>setDecision(row.id, "keep")} />
+                  <ChoiceBtn active={row.decision==="remove"} label="Remove" onClick={()=>setDecision(row.id, "remove")} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         <p style={{ margin:0, fontSize:12, color:T.text3, lineHeight:"18px" }}>
           Any manual entries you keep stay as user-confirmed obligations until you remove them later in Settings.
@@ -1563,6 +1646,22 @@ function CashFlowScreen({
               <span style={{ fontSize:14, fontWeight:600, color:T.red }}>{fmt(-item.amount)}</span>
             </div>
           ))}
+          {profile !== "manual" && carriedManualObligations > 0 && (
+            <>
+              {Array.from({ length: carriedManualObligations }).map((_, i) => (
+                <div key={`manual-ob-${i}`} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 12px", borderRadius:12, background:T.bgPage, border:`1px dashed ${T.yellowBorder}` }}>
+                  <div>
+                    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                      <p style={{ margin:0, fontSize:14, fontWeight:600 }}>User-kept obligation {i + 1}</p>
+                      <span style={{ fontSize:10, fontWeight:600, color:T.yellow, background:T.bgWarning, borderRadius:999, padding:"2px 7px" }}>Manual</span>
+                    </div>
+                    <p style={{ margin:"2px 0 0", fontSize:12, color:T.text3 }}>From pre-link manual entries</p>
+                  </div>
+                  <span style={{ fontSize:12, fontWeight:600, color:T.text2 }}>Included</span>
+                </div>
+              ))}
+            </>
+          )}
 
           {/* Pending transactions (D10) — lighter treatment, distinct from confirmed */}
           {profile !== "manual" && m.pendingTx && m.pendingTx.length > 0 && (
@@ -1675,13 +1774,14 @@ export default function App() {
     go("bill-review");
   };
 
-  const handleBillReviewComplete = () => {
+  const handleBillReviewComplete = (keptUnmatchedManual: number) => {
+    setCarriedManualObligations(keptUnmatchedManual);
+    setNeedsReconciliation(false);
     go("paycheck-confirm");
   };
 
   const continueAfterIncome = () => {
-    if (needsReconciliation) go("reconciliation");
-    else go("cashflow");
+    go("cashflow");
   };
 
   const handleIncomeDetectedConfirm = () => {
@@ -1809,7 +1909,7 @@ export default function App() {
             {screen === "link-bank"       && <LinkBankScreen    onBack={()=>go("splash")}    onSelect={handleBankSelect} />}
             {screen === "link-connecting" && <LinkConnectingScreen bank={bank ?? "Chase"} onConnected={handleConnected} />}
             {screen === "joint-account"   && <JointAccountScreen bank={bank ?? "Chase"} onConfirm={handleJointConfirm} />}
-            {screen === "bill-review"     && <BillReviewScreen simulateLowHistory={simulateLowHistory} onBack={()=>go("link-connecting")} onComplete={handleBillReviewComplete} />}
+            {screen === "bill-review"     && <BillReviewScreen simulateLowHistory={simulateLowHistory} needsReconciliation={needsReconciliation} onBack={()=>go("link-connecting")} onComplete={handleBillReviewComplete} />}
             {screen === "paycheck-confirm"&& <PaycheckConfirmScreen signal={paycheckSignal} onBack={()=>go("bill-review")} onConfirmDetected={handleIncomeDetectedConfirm} onUseManual={handleIncomeManualConfirm} onUseDirectDeposit={handleIncomeDDConfirm} />}
             {screen === "reconciliation"  && <ReconciliationScreen onBack={()=>go("paycheck-confirm")} onComplete={handleReconciliationComplete} />}
             {screen === "cf-settings"     && <CashFlowSettingsScreen accountState={accountState} carriedManualObligations={carriedManualObligations} onBack={()=>go("cashflow")} onImproveAccuracy={()=>go("link-bank")} onReviewBills={()=>go("bill-review")} onManualEntries={()=>go("reconciliation")} />}
