@@ -26,7 +26,7 @@ const T = {
 ═══════════════════════════════════════════════════════════════════ */
 type Screen =
   | "accounts" | "splash"
-  | "link-bank" | "link-connecting" | "joint-account" | "bill-review" | "paycheck-confirm"
+  | "link-bank" | "link-connecting" | "joint-account" | "bill-review" | "paycheck-confirm" | "reconciliation"
   | "manual-paycheck" | "manual-bills"
   | "cashflow";
 
@@ -43,6 +43,16 @@ interface CFObligation { label: string; amount: number; date: string; pending?: 
 interface DetectedItem {
   id: string; label: string; amount: number; frequency: string;
   confirmed: boolean; userAdded?: boolean;
+}
+type ReconRowType = "conflict" | "unmatched-manual" | "new-detected";
+type ReconDecision = "keep-mine" | "use-detected" | "keep" | "remove" | "add" | "skip";
+interface ReconRow {
+  id: string;
+  type: ReconRowType;
+  label: string;
+  manualAmount?: number;
+  detectedAmount?: number;
+  decision?: ReconDecision;
 }
 interface CFModel {
   balance: number; safeToSpend: number; committedTotal: number;
@@ -98,6 +108,12 @@ const INITIAL_DETECTED: DetectedItem[] = [
   { id:"spotify", label:"Spotify",         amount:10.99, frequency:"Monthly",  confirmed:false },
   { id:"netflix", label:"Netflix",         amount:15.49, frequency:"Monthly",  confirmed:false },
   { id:"gym",     label:"Planet Fitness",  amount:24.99, frequency:"Monthly",  confirmed:false },
+];
+
+const INITIAL_RECON_ROWS: ReconRow[] = [
+  { id:"r-conflict-rent", type:"conflict",         label:"Rent / Mortgage", manualAmount:850, detectedAmount:900 },
+  { id:"r-unmatched-util", type:"unmatched-manual", label:"Utilities",       manualAmount:120 },
+  { id:"r-new-insurance", type:"new-detected",     label:"Car insurance",    detectedAmount:96 },
 ];
 
 const CF: Record<"linked"|"manual"|"partial", Record<RiskLevel, CFModel>> = {
@@ -676,7 +692,9 @@ function BillReviewScreen({ simulateLowHistory, onBack, onComplete }: {
   const restoreItem = (id: string) => {
     setRemoved(prev => {
       const target = prev.find(i => i.id === id);
-      if (target) setItems(itemsPrev => [...itemsPrev, target]);
+      if (target) {
+        setItems(itemsPrev => itemsPrev.some(i => i.id === target.id) ? itemsPrev : [...itemsPrev, target]);
+      }
       return prev.filter(i => i.id !== id);
     });
   };
@@ -900,6 +918,9 @@ function PaycheckConfirmScreen({
             </div>
           </div>
           <PrimaryBtn label="Confirm income and continue →" onClick={onConfirmDetected} bg={T.tealDark} />
+          <button onClick={onUseDirectDeposit} style={{ height:42, border:`1px solid ${T.tealDark}`, borderRadius:999, background:"transparent", color:T.tealDark, fontWeight:600, fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>
+            Set up direct deposit instead
+          </button>
           <button onClick={onUseManual} style={{ background:"none", border:"none", color:T.text2, fontSize:13, cursor:"pointer", padding:0, fontFamily:"inherit" }}>
             This looks wrong — I will enter it manually
           </button>
@@ -945,6 +966,109 @@ function PaycheckConfirmScreen({
           <button onClick={()=>setShowManual(true)} style={{ background:"none", border:"none", color:T.tealDark, fontSize:13, fontWeight:600, cursor:"pointer", textAlign:"left", padding:0, fontFamily:"inherit" }}>
             Enter paycheck manually instead
           </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SCREEN 4B-RECON — MANUAL TO BV RECONCILIATION (D2)
+═══════════════════════════════════════════════════════════════════ */
+function ReconciliationScreen({
+  onBack, onComplete,
+}: {
+  onBack: () => void; onComplete: (keptUnmatchedManual: number) => void;
+}) {
+  const [rows, setRows] = useState<ReconRow[]>(INITIAL_RECON_ROWS);
+  const setDecision = (id: string, decision: ReconDecision) => setRows(prev => prev.map(r => r.id === id ? { ...r, decision } : r));
+  const allResolved = rows.every(r => !!r.decision);
+  const keptUnmatchedManual = rows.filter(r => r.type === "unmatched-manual" && r.decision === "keep").length;
+
+  const ChoiceBtn = ({
+    active, label, onClick,
+  }: {
+    active: boolean; label: string; onClick: () => void;
+  }) => (
+    <button
+      onClick={onClick}
+      style={{
+        height: 34, padding: "0 12px", borderRadius: 999, cursor: "pointer",
+        border: `1.5px solid ${active ? T.tealDark : T.border}`,
+        background: active ? T.bgAccent : T.bgCard,
+        color: active ? T.tealDark : T.text2, fontSize: 12, fontWeight: 600, fontFamily: "inherit",
+      }}
+    >{label}</button>
+  );
+
+  return (
+    <div>
+      <NavBar title="" onBack={onBack} />
+      <div style={{ padding:"4px 20px 32px", display:"grid", gap:18 }}>
+        <div style={{ display:"grid", gap:6 }}>
+          <h1 style={{ margin:0, fontSize:22, lineHeight:"30px", fontWeight:600, letterSpacing:"-0.5px" }}>Let's check what changed</h1>
+          <p style={{ margin:0, fontSize:14, color:T.text2, lineHeight:"20px" }}>
+            We compared what you entered with what we found. Review any differences.
+          </p>
+        </div>
+
+        <div style={{ display:"grid", gap:10 }}>
+          {rows.map(row => (
+            <div key={row.id} style={{ background:T.bgCard, border:`1px solid ${T.border}`, borderRadius:14, padding:"12px 14px", display:"grid", gap:8 }}>
+              {row.type === "conflict" && (
+                <>
+                  <p style={{ margin:0, fontSize:14, fontWeight:600 }}>{row.label}</p>
+                  <p style={{ margin:0, fontSize:13, color:T.text2 }}>
+                    You entered: <strong>{fmt(row.manualAmount ?? 0)}</strong> · We found: <strong>{fmt(row.detectedAmount ?? 0)}</strong>
+                  </p>
+                  <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                    <ChoiceBtn active={row.decision==="keep-mine"} label="Keep mine" onClick={()=>setDecision(row.id, "keep-mine")} />
+                    <ChoiceBtn active={row.decision==="use-detected"} label="Use detected" onClick={()=>setDecision(row.id, "use-detected")} />
+                  </div>
+                </>
+              )}
+
+              {row.type === "unmatched-manual" && (
+                <>
+                  <p style={{ margin:0, fontSize:14, fontWeight:600 }}>{row.label}</p>
+                  <p style={{ margin:0, fontSize:13, color:T.text2 }}>
+                    We did not find this in linked activity. Keep as an obligation?
+                  </p>
+                  <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                    <ChoiceBtn active={row.decision==="keep"} label="Keep" onClick={()=>setDecision(row.id, "keep")} />
+                    <ChoiceBtn active={row.decision==="remove"} label="Remove" onClick={()=>setDecision(row.id, "remove")} />
+                  </div>
+                </>
+              )}
+
+              {row.type === "new-detected" && (
+                <>
+                  <p style={{ margin:0, fontSize:14, fontWeight:600 }}>{row.label}</p>
+                  <p style={{ margin:0, fontSize:13, color:T.text2 }}>
+                    We found this recurring payment: <strong>{fmt(row.detectedAmount ?? 0)}</strong>. Add it?
+                  </p>
+                  <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                    <ChoiceBtn active={row.decision==="add"} label="Add" onClick={()=>setDecision(row.id, "add")} />
+                    <ChoiceBtn active={row.decision==="skip"} label="Skip" onClick={()=>setDecision(row.id, "skip")} />
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <p style={{ margin:0, fontSize:12, color:T.text3, lineHeight:"18px" }}>
+          Any manual entries you keep stay as user-confirmed obligations until you remove them later in Settings.
+        </p>
+
+        <button
+          onClick={allResolved ? () => onComplete(keptUnmatchedManual) : undefined}
+          style={{ height:52, border:"none", borderRadius:999, background: allResolved ? T.tealDark : T.border, color: allResolved ? "#FFF" : T.text3, fontWeight:600, fontSize:15, cursor: allResolved ? "pointer" : "default", fontFamily:"inherit" }}
+        >
+          Confirm and continue →
+        </button>
+        {!allResolved && (
+          <p style={{ margin:0, fontSize:12, color:T.text3, textAlign:"center" }}>Resolve each row to continue.</p>
         )}
       </div>
     </div>
@@ -1111,10 +1235,10 @@ function LinkBankPrompt({ accountState, onLinkBank }: { accountState: AccountSta
 }
 
 function CashFlowScreen({
-  accountState, risk, linkedOverlay, linkedIncomeStatus, isJointAccount, jointShare, onBack, onLinkBank,
+  accountState, risk, linkedOverlay, linkedIncomeStatus, carriedManualObligations, isJointAccount, jointShare, onBack, onLinkBank,
 }: {
   accountState:AccountState; risk:RiskLevel; linkedOverlay:LinkedOverlay; linkedIncomeStatus:LinkedIncomeStatus;
-  isJointAccount:boolean; jointShare:number|null; onBack:()=>void; onLinkBank:()=>void;
+  carriedManualObligations:number; isJointAccount:boolean; jointShare:number|null; onBack:()=>void; onLinkBank:()=>void;
 }) {
   const profile =
     accountState === "manual-only" ? "manual"
@@ -1293,6 +1417,14 @@ function CashFlowScreen({
           )}
         </div>
 
+        {profile !== "manual" && carriedManualObligations > 0 && (
+          <div style={{ background:T.bgWarning, border:`1px solid ${T.yellowBorder}`, borderRadius:14, padding:"10px 12px" }}>
+            <p style={{ margin:0, fontSize:13, color:T.text2 }}>
+              Includes <strong>{carriedManualObligations}</strong> user-confirmed manual obligation{carriedManualObligations > 1 ? "s" : ""} that were not matched in linked data.
+            </p>
+          </div>
+        )}
+
         {/* Upcoming payments */}
         <div style={{ background:T.bgCard, border:`1px solid ${T.border}`, borderRadius:20, padding:20, display:"grid", gap:10 }}>
           <h2 style={{ margin:0, fontSize:16, fontWeight:600, letterSpacing:"-0.3px" }}>
@@ -1372,6 +1504,7 @@ const SCREEN_LABELS: Record<Screen, string> = {
   "joint-account":    "Joint account",
   "bill-review":      "Bill review",
   "paycheck-confirm": "Paycheck confirm",
+  "reconciliation":   "Reconciliation",
   "manual-paycheck":  "Manual: paycheck",
   "manual-bills":     "Manual: bills",
   "cashflow":         "Cash Flow",
@@ -1384,6 +1517,8 @@ export default function App() {
   const [linkedOverlay, setLinkedOverlay] = useState<LinkedOverlay>("none");
   const [bank,    setBank]    = useState<string | null>(null);
   const [linkedIncomeStatus, setLinkedIncomeStatus] = useState<LinkedIncomeStatus>("unconfirmed");
+  const [needsReconciliation, setNeedsReconciliation] = useState(false);
+  const [carriedManualObligations, setCarriedManualObligations] = useState(0);
   const [isJointAccount, setIsJointAccount] = useState(false);
   const [jointShare,     setJointShare]     = useState<number | null>(null);
   const [simulateJoint,  setSimulateJoint]  = useState(false);
@@ -1400,8 +1535,11 @@ export default function App() {
   const handleBankSelect = (b: string) => { setBank(b); go("link-connecting"); };
 
   const handleConnected = () => {
+    const wasManualUser = accountState === "manual-only";
     setAccountState("bv-linked");
     setLinkedIncomeStatus("unconfirmed");
+    setNeedsReconciliation(wasManualUser);
+    setCarriedManualObligations(0);
     if (simulateJoint) go("joint-account");
     else go("bill-review");
   };
@@ -1416,18 +1554,29 @@ export default function App() {
     go("paycheck-confirm");
   };
 
+  const continueAfterIncome = () => {
+    if (needsReconciliation) go("reconciliation");
+    else go("cashflow");
+  };
+
   const handleIncomeDetectedConfirm = () => {
     setLinkedIncomeStatus("confirmed");
-    go("cashflow");
+    continueAfterIncome();
   };
 
   const handleIncomeManualConfirm = () => {
     setLinkedIncomeStatus("manual");
-    go("cashflow");
+    continueAfterIncome();
   };
 
   const handleIncomeDDConfirm = () => {
     setLinkedIncomeStatus("dd");
+    continueAfterIncome();
+  };
+
+  const handleReconciliationComplete = (keptUnmatchedManual: number) => {
+    setCarriedManualObligations(keptUnmatchedManual);
+    setNeedsReconciliation(false);
     go("cashflow");
   };
 
@@ -1513,7 +1662,7 @@ export default function App() {
             </div>
           </div>
 
-          <button onClick={()=>{ go("accounts"); setAccountState("new-user"); setRisk("tight"); setLinkedOverlay("none"); setLinkedIncomeStatus("unconfirmed"); setIsJointAccount(false); setJointShare(null); setSimulateJoint(false); setSimulateLowHistory(false); setPaycheckSignal("detected"); }} style={{ height:40, border:`1px solid ${T.border}`, borderRadius:999, background:"transparent", fontSize:13, fontWeight:600, color:T.text2, cursor:"pointer", fontFamily:"inherit" }}>↺ Reset flow</button>
+          <button onClick={()=>{ go("accounts"); setAccountState("new-user"); setRisk("tight"); setLinkedOverlay("none"); setLinkedIncomeStatus("unconfirmed"); setNeedsReconciliation(false); setCarriedManualObligations(0); setIsJointAccount(false); setJointShare(null); setSimulateJoint(false); setSimulateLowHistory(false); setPaycheckSignal("detected"); }} style={{ height:40, border:`1px solid ${T.border}`, borderRadius:999, background:"transparent", fontSize:13, fontWeight:600, color:T.text2, cursor:"pointer", fontFamily:"inherit" }}>↺ Reset flow</button>
 
           <p style={{ margin:0, fontSize:10, color:T.text3, lineHeight:"15px" }}>Font: DM Sans<br/>Production: Baton Turbo<br/>Tokens: MLDS 4.0</p>
         </div>
@@ -1537,9 +1686,10 @@ export default function App() {
             {screen === "joint-account"   && <JointAccountScreen bank={bank ?? "Chase"} onConfirm={handleJointConfirm} />}
             {screen === "bill-review"     && <BillReviewScreen simulateLowHistory={simulateLowHistory} onBack={()=>go("link-connecting")} onComplete={handleBillReviewComplete} />}
             {screen === "paycheck-confirm"&& <PaycheckConfirmScreen signal={paycheckSignal} onBack={()=>go("bill-review")} onConfirmDetected={handleIncomeDetectedConfirm} onUseManual={handleIncomeManualConfirm} onUseDirectDeposit={handleIncomeDDConfirm} />}
+            {screen === "reconciliation"  && <ReconciliationScreen onBack={()=>go("paycheck-confirm")} onComplete={handleReconciliationComplete} />}
             {screen === "manual-paycheck" && <ManualPaycheckScreen onBack={()=>go("splash")} onContinue={()=>go("manual-bills")} />}
             {screen === "manual-bills"    && <ManualBillsScreen  onBack={()=>go("manual-paycheck")} onDone={handleManualDone} />}
-            {screen === "cashflow"        && <CashFlowScreen     accountState={accountState} risk={risk} linkedOverlay={linkedOverlay} linkedIncomeStatus={linkedIncomeStatus} isJointAccount={isJointAccount} jointShare={jointShare} onBack={()=>go("accounts")} onLinkBank={()=>go("link-bank")} />}
+            {screen === "cashflow"        && <CashFlowScreen     accountState={accountState} risk={risk} linkedOverlay={linkedOverlay} linkedIncomeStatus={linkedIncomeStatus} carriedManualObligations={carriedManualObligations} isJointAccount={isJointAccount} jointShare={jointShare} onBack={()=>go("accounts")} onLinkBank={()=>go("link-bank")} />}
           </div>
 
           {/* Home indicator */}

@@ -1,7 +1,7 @@
 # Cash Flow — Build Phases
 
 > **Purpose:** Working reference for design and build order. Update status markers as each phase completes.
-> **Last updated:** April 9, 2026 (Phases 1–5 complete + Confidence/Paycheck patch)
+> **Last updated:** April 9, 2026 (Phases 1–6 complete + Confidence/Paycheck patch)
 > **Owner:** Jaf Inas / PFM Team
 
 ---
@@ -331,7 +331,7 @@ All decisions below are confirmed. No further alignment needed before building.
 
 ---
 
-## Phase 6 — Manual → BV-Link Reconciliation 🔴 ⬜
+## Phase 6 — Manual → BV-Link Reconciliation 🔴 ✅
 
 **Why sixth:** The most complex and novel screen in the project. No precedent in the current prototype. Depends on Phase 5 (bill review gate) being complete since reconciliation follows it in the flow. Requires the most careful UX thinking before building.
 
@@ -339,39 +339,41 @@ All decisions below are confirmed. No further alignment needed before building.
 
 **Estimated effort:** 2 sessions
 
-### When it triggers
+### Trigger (updated with Phase 5A flow)
 - User has existing manual data (paycheck + bills entered)
-- User goes through the splash → link bank → bill review gate flow
-- After bill review gate confirms, reconciliation screen appears before CF
+- User links bank and completes: `bill-review` → `paycheck-confirm`
+- Reconciliation now appears **after paycheck confirmation** and before CF
 
-### New screen: Reconciliation
-- Header: "Let's check what changed"
-- Subheader: "We compared what you entered with what we found. Review any differences."
+### What was built
+- New screen: `"reconciliation"` ✅
+- Header: "Let's check what changed" ✅
+- Subheader: "We compared what you entered with what we found. Review any differences." ✅
 
 ### Three row types
 
-| Row type | Appearance | Action |
-|---|---|---|
-| Conflict | "You entered: $850 · We found: $900" | Keep mine / Use detected |
-| Unmatched manual entry (D2) | "We did not find this — keep it as an obligation?" | Keep / Remove |
-| New BV-detected (not in manual) | "We found this — add it?" | Add / Skip |
+| Row type | Appearance | Action | Status |
+|---|---|---|---|
+| Conflict | "You entered: $850 · We found: $900" | Keep mine / Use detected | ✅ |
+| Unmatched manual entry (D2) | "We did not find this — keep it as an obligation?" | Keep / Remove | ✅ |
+| New BV-detected (not in manual) | "We found this — add it?" | Add / Skip | ✅ |
 
-- CTA: "Confirm and continue"
-- All rows must be resolved before CTA is active
+- CTA: "Confirm and continue" ✅
+- CTA disabled until **all rows resolved** (clear binary action required per row) ✅
 
-### Post-reconciliation
-- Manual data archived — accessible via Settings > Cash Flow > Manual entries (Phase 7)
-- Unmatched confirmed manual entries persist as obligations (D2)
-- BV data becomes primary source of truth
+### Post-reconciliation behavior
+- Unmatched manual entries kept by user persist as obligations (D2) ✅
+- Persisted unmatched manual count is shown in CF via a yellow disclosure banner ✅
+- Manual archive destination remains Phase 7 settings surface ✅
 
 ### Dependencies
-- Phase 5 must be complete (reconciliation follows bill review gate in the flow)
-- D2 locked
+- Phase 5 + Phase 5A complete ✅
+- D2 locked ✅
 
-### Success criteria
-- No conflict is silently resolved without user input
-- Every row has a clear binary choice — no ambiguous states
-- User can access archived manual data after the fact
+### Success criteria ✅
+- No conflict is silently resolved without user input ✅
+- Every row has a clear binary choice — no ambiguous states ✅
+- Reconciliation is only shown when manual data existed pre-link ✅
+- CF discloses carried manual obligations after reconciliation ✅
 
 ---
 
