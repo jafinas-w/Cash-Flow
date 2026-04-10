@@ -26,15 +26,17 @@ const T = {
 ═══════════════════════════════════════════════════════════════════ */
 type Screen =
   | "accounts" | "splash"
-  | "link-bank" | "link-connecting" | "joint-account" | "bill-review"
+  | "link-bank" | "link-connecting" | "joint-account" | "bill-review" | "paycheck-confirm"
   | "manual-paycheck" | "manual-bills"
   | "cashflow";
 
 type AccountState = "new-user" | "manual-only" | "roarmoney-only" | "roarmoney-dd" | "bv-linked";
 type RiskLevel     = "ahead" | "tight" | "short";
 type PayFreq       = "weekly" | "biweekly" | "semimonthly" | "monthly";
-type Confidence    = "High confidence" | "Medium confidence" | "Low confidence" | "Manual estimate" | "Still learning" | "Unreliable";
+type Confidence    = "High confidence" | "Medium confidence" | "Low confidence" | "Manual estimate" | "Still learning" | "Unreliable" | "Partial view";
 type LinkedOverlay = "none" | "still-learning" | "reconnect" | "missing-tx";
+type PaycheckSignal = "detected" | "not-detected";
+type LinkedIncomeStatus = "unconfirmed" | "confirmed" | "manual" | "dd";
 
 interface Bill { id: string; label: string; amount: string; enabled: boolean; dueDay: number }
 interface CFObligation { label: string; amount: number; date: string; pending?: boolean }
@@ -100,13 +102,13 @@ const INITIAL_DETECTED: DetectedItem[] = [
 
 const CF: Record<"linked"|"manual"|"partial", Record<RiskLevel, CFModel>> = {
   linked: {
-    ahead: { balance:1492, savings:1035, safeToSpend:342,  committedTotal:955, estimatedVariable:105, buffer:90, confidence:"High confidence",   asOf:"Today, 11:42 AM",  stale:false, nextPayday:"Apr 14",
+    ahead: { balance:1492, savings:1035, safeToSpend:342,  committedTotal:955, estimatedVariable:105, buffer:90, confidence:"Medium confidence", asOf:"Today, 11:42 AM",  stale:false, nextPayday:"Apr 14",
       committed:[{label:"Rent",amount:850,date:"Apr 11"},{label:"Phone bill",amount:78,date:"Apr 12"},{label:"Subscriptions",amount:27,date:"Apr 13"}],
       pendingTx:[{label:"Walmart",amount:32,date:"Today",pending:true},{label:"Starbucks",amount:8,date:"Today",pending:true}] },
-    tight: { balance:1138, savings:1035, safeToSpend:89,   committedTotal:955, estimatedVariable:94,  buffer:0,  confidence:"High confidence",   asOf:"Today, 11:42 AM",  stale:false, nextPayday:"Apr 14",
+    tight: { balance:1138, savings:1035, safeToSpend:89,   committedTotal:955, estimatedVariable:94,  buffer:0,  confidence:"Medium confidence", asOf:"Today, 11:42 AM",  stale:false, nextPayday:"Apr 14",
       committed:[{label:"Rent",amount:850,date:"Apr 11"},{label:"Phone bill",amount:78,date:"Apr 12"},{label:"Subscriptions",amount:27,date:"Apr 13"},{label:"Instacash repayment",amount:55,date:"Apr 14"}],
       pendingTx:[{label:"Amazon",amount:67,date:"Today",pending:true}] },
-    short: { balance:992,  savings:1035, safeToSpend:-43,  committedTotal:955, estimatedVariable:90,  buffer:0,  confidence:"High confidence",   asOf:"Today, 11:42 AM",  stale:false, nextPayday:"Apr 14",
+    short: { balance:992,  savings:1035, safeToSpend:-43,  committedTotal:955, estimatedVariable:90,  buffer:0,  confidence:"Medium confidence", asOf:"Today, 11:42 AM",  stale:false, nextPayday:"Apr 14",
       committed:[{label:"Rent",amount:850,date:"Apr 11"},{label:"Phone bill",amount:78,date:"Apr 12"},{label:"Subscriptions",amount:27,date:"Apr 13"},{label:"Instacash repayment",amount:55,date:"Apr 14"}],
       pendingTx:[{label:"Target",amount:94,date:"Today",pending:true},{label:"Spotify",amount:11,date:"Today",pending:true}] },
   },
@@ -116,9 +118,9 @@ const CF: Record<"linked"|"manual"|"partial", Record<RiskLevel, CFModel>> = {
     short: { balance:947,  safeToSpend:-88,  committedTotal:1035, estimatedVariable:0, buffer:0, confidence:"Manual estimate", asOf:"Apr 9, 2026", stale:false, nextPayday:"Apr 15", committed:[{label:"Rent",amount:850,date:"Apr 11"},{label:"Phone",amount:78,date:"Apr 12"},{label:"Streaming",amount:25,date:"Apr 13"},{label:"Gym",amount:40,date:"Apr 14"},{label:"Internet",amount:37,date:"Apr 14"},{label:"Car payment",amount:53,date:"Apr 14"}] },
   },
   partial: {
-    ahead: { balance:1090, safeToSpend:128,  committedTotal:861, estimatedVariable:120, buffer:0,  confidence:"Medium confidence", asOf:"Today, 2:06 AM",   stale:true,  nextPayday:"Apr 14", committed:[{label:"Rent",amount:850,date:"Apr 11"},{label:"Linked subscription",amount:11,date:"Apr 12"}] },
-    tight: { balance:1015, safeToSpend:34,   committedTotal:861, estimatedVariable:120, buffer:0,  confidence:"Medium confidence", asOf:"Today, 2:06 AM",   stale:true,  nextPayday:"Apr 14", committed:[{label:"Rent",amount:850,date:"Apr 11"},{label:"Linked subscription",amount:11,date:"Apr 12"}] },
-    short: { balance:836,  safeToSpend:-25,  committedTotal:861, estimatedVariable:120, buffer:0,  confidence:"Medium confidence", asOf:"Today, 2:06 AM",   stale:true,  nextPayday:"Apr 14", committed:[{label:"Rent",amount:850,date:"Apr 11"},{label:"Linked subscription",amount:11,date:"Apr 12"}] },
+    ahead: { balance:1090, safeToSpend:128,  committedTotal:861, estimatedVariable:120, buffer:0,  confidence:"Partial view", asOf:"Today, 2:06 AM",   stale:true,  nextPayday:"Apr 14", committed:[{label:"Rent",amount:850,date:"Apr 11"},{label:"Linked subscription",amount:11,date:"Apr 12"}] },
+    tight: { balance:1015, safeToSpend:34,   committedTotal:861, estimatedVariable:120, buffer:0,  confidence:"Partial view", asOf:"Today, 2:06 AM",   stale:true,  nextPayday:"Apr 14", committed:[{label:"Rent",amount:850,date:"Apr 11"},{label:"Linked subscription",amount:11,date:"Apr 12"}] },
+    short: { balance:836,  safeToSpend:-25,  committedTotal:861, estimatedVariable:120, buffer:0,  confidence:"Partial view", asOf:"Today, 2:06 AM",   stale:true,  nextPayday:"Apr 14", committed:[{label:"Rent",amount:850,date:"Apr 11"},{label:"Linked subscription",amount:11,date:"Apr 12"}] },
   },
 };
 
@@ -130,8 +132,8 @@ const ACCOUNT_BALANCE_DATA = {
 const STATUS_COPY:  Record<RiskLevel, string> = { ahead:"You are ahead",   tight:"Budget is tight",   short:"You may come up short" };
 const STATUS_COLOR: Record<RiskLevel, string> = { ahead:T.tealDark,       tight:T.yellow,            short:T.red                   };
 const STATUS_BG:    Record<RiskLevel, string> = { ahead:T.bgAccent,       tight:T.bgWarning,         short:T.bgNegative            };
-const CONF_COLOR:   Record<Confidence,string> = { "High confidence":T.tealDark, "Medium confidence":T.yellow, "Low confidence":T.red, "Manual estimate":T.yellow, "Still learning":T.yellow, "Unreliable":T.red };
-const CONF_BG:      Record<Confidence,string> = { "High confidence":T.bgAccent, "Medium confidence":T.bgWarning, "Low confidence":T.bgNegative, "Manual estimate":T.bgWarning, "Still learning":T.bgWarning, "Unreliable":T.bgNegative };
+const CONF_COLOR:   Record<Confidence,string> = { "High confidence":T.tealDark, "Medium confidence":T.yellow, "Low confidence":T.red, "Manual estimate":T.yellow, "Still learning":T.yellow, "Unreliable":T.red, "Partial view":T.yellow };
+const CONF_BG:      Record<Confidence,string> = { "High confidence":T.bgAccent, "Medium confidence":T.bgWarning, "Low confidence":T.bgNegative, "Manual estimate":T.bgWarning, "Still learning":T.bgWarning, "Unreliable":T.bgNegative, "Partial view":T.bgWarning };
 
 /* ═══════════════════════════════════════════════════════════════════
    HELPERS
@@ -224,14 +226,18 @@ function PaycheckBar({ model }: { model: CFModel }) {
 function totalBalanceFor(state: AccountState): number | null {
   if (state === "new-user" || state === "manual-only") return null;
   if (state === "roarmoney-only") return ACCOUNT_BALANCE_DATA.roarmoney.roarMoney;
-  if (state === "roarmoney-dd") return ACCOUNT_BALANCE_DATA.roarmoney.roarMoney + ACCOUNT_BALANCE_DATA.roarmoney.checking + ACCOUNT_BALANCE_DATA.roarmoney.savings;
+  if (state === "roarmoney-dd") return ACCOUNT_BALANCE_DATA.roarmoney.roarMoney;
   return ACCOUNT_BALANCE_DATA.linked.roarMoney + ACCOUNT_BALANCE_DATA.linked.checking + ACCOUNT_BALANCE_DATA.linked.savings;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
    SCREEN 1 — ACCOUNTS
 ═══════════════════════════════════════════════════════════════════ */
-function CashFlowWidget({ accountState, onTap }: { accountState:AccountState; onTap:()=>void }) {
+function CashFlowWidget({
+  accountState, linkedIncomeStatus, onTap,
+}: {
+  accountState:AccountState; linkedIncomeStatus:LinkedIncomeStatus; onTap:()=>void;
+}) {
   const card: React.CSSProperties = { width:"100%", background:T.bgCard, border:`1px solid ${T.border}`, borderRadius:20, padding:20, textAlign:"left", cursor:"pointer", display:"grid", gap:12, fontFamily:"inherit" };
   if (accountState === "new-user") return (
     <button onClick={onTap} style={card}>
@@ -276,15 +282,38 @@ function CashFlowWidget({ accountState, onTap }: { accountState:AccountState; on
       <div style={{ fontSize:13, color:T.tealDark, fontWeight:600 }}>View details →</div>
     </button>
   );
+  if (accountState === "roarmoney-dd") return (
+    <button onClick={onTap} style={card}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <span style={{ fontSize:16, fontWeight:600 }}>Cash Flow</span>
+        <Badge label="Partial view" color={T.yellow} bg={T.bgWarning} />
+      </div>
+      <p style={{ margin:0, fontSize:12, color:T.text3, fontWeight:600 }}>SAFE TO SPEND</p>
+      <p style={{ margin:"-8px 0 0 0", fontSize:36, fontWeight:600, letterSpacing:-1 }}>$196</p>
+      <p style={{ margin:"-4px 0 0 0", fontSize:12, color:T.text3 }}>RoarMoney + DD income · External bills not linked</p>
+      <div style={{ background:T.bgWarning, borderRadius:12, padding:"10px 12px" }}>
+        <p style={{ margin:0, fontSize:13, color:T.text1 }}>Income is confirmed through direct deposit. <span style={{ color:T.tealDark, fontWeight:600 }}>Link external spending accounts</span> for a full picture.</p>
+      </div>
+      <div style={{ fontSize:13, color:T.tealDark, fontWeight:600 }}>View details →</div>
+    </button>
+  );
   return (
     <button onClick={onTap} style={card}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
         <span style={{ fontSize:16, fontWeight:600 }}>Cash Flow</span>
-        <Badge label="High confidence" color={T.tealDark} bg={T.bgAccent} />
+        <Badge
+          label={linkedIncomeStatus === "confirmed" || linkedIncomeStatus === "dd" ? "High confidence" : "Medium confidence"}
+          color={linkedIncomeStatus === "confirmed" || linkedIncomeStatus === "dd" ? T.tealDark : T.yellow}
+          bg={linkedIncomeStatus === "confirmed" || linkedIncomeStatus === "dd" ? T.bgAccent : T.bgWarning}
+        />
       </div>
       <p style={{ margin:0, fontSize:12, color:T.text3, fontWeight:600 }}>SAFE TO SPEND</p>
       <p style={{ margin:"-8px 0 0 0", fontSize:36, fontWeight:600, letterSpacing:-1 }}>$342</p>
-      <p style={{ margin:"-4px 0 0 0", fontSize:12, color:T.text3 }}>As of 11:42 AM · Next paycheck Apr 14</p>
+      <p style={{ margin:"-4px 0 0 0", fontSize:12, color:T.text3 }}>
+        {linkedIncomeStatus === "confirmed" || linkedIncomeStatus === "dd"
+          ? "As of 11:42 AM · Next paycheck Apr 14"
+          : "Bills detected · Paycheck pending confirmation"}
+      </p>
       <div style={{ height:6, borderRadius:999, background:"#EEE", overflow:"hidden", display:"flex" }}>
         <div style={{ width:"64%", background:T.red }} /><div style={{ width:"7%", background:T.yellow }} /><div style={{ width:"23%", background:T.tealBright }} />
       </div>
@@ -293,10 +322,14 @@ function CashFlowWidget({ accountState, onTap }: { accountState:AccountState; on
   );
 }
 
-function AccountsScreen({ accountState, onWidgetTap }: { accountState:AccountState; onWidgetTap:()=>void }) {
+function AccountsScreen({
+  accountState, linkedIncomeStatus, onWidgetTap,
+}: {
+  accountState:AccountState; linkedIncomeStatus:LinkedIncomeStatus; onWidgetTap:()=>void;
+}) {
   const totalBalance = totalBalanceFor(accountState);
   const showsRoarMoney = accountState !== "new-user" && accountState !== "manual-only";
-  const showsExternalAccounts = accountState === "roarmoney-dd" || accountState === "bv-linked";
+  const showsExternalAccounts = accountState === "bv-linked";
 
   return (
     <div>
@@ -364,7 +397,7 @@ function AccountsScreen({ accountState, onWidgetTap }: { accountState:AccountSta
           </>
         )}
 
-        <CashFlowWidget accountState={accountState} onTap={onWidgetTap} />
+        <CashFlowWidget accountState={accountState} linkedIncomeStatus={linkedIncomeStatus} onTap={onWidgetTap} />
         <div style={{ background:T.bgCard, borderRadius:20, padding:20, border:`1px solid ${T.border}`, opacity:0.45 }}>
           <div style={{ display:"flex", justifyContent:"space-between", marginBottom:10 }}>
             <span style={{ fontSize:16, fontWeight:600 }}>Spending</span>
@@ -621,6 +654,7 @@ function BillReviewScreen({ simulateLowHistory, onBack, onComplete }: {
   simulateLowHistory: boolean; onBack: () => void; onComplete: () => void;
 }) {
   const [items, setItems]         = useState<DetectedItem[]>(INITIAL_DETECTED);
+  const [removed, setRemoved]     = useState<DetectedItem[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editLabel, setEditLabel] = useState("");
   const [editAmt,   setEditAmt]   = useState("");
@@ -632,7 +666,20 @@ function BillReviewScreen({ simulateLowHistory, onBack, onComplete }: {
   const canProceed     = confirmedCount > 0;
 
   const confirmItem = (id: string) => setItems(p => p.map(i => i.id === id ? { ...i, confirmed: true } : i));
-  const removeItem  = (id: string) => setItems(p => p.filter(i => i.id !== id));
+  const removeItem  = (id: string) => {
+    setItems(prev => {
+      const target = prev.find(i => i.id === id);
+      if (target) setRemoved(r => [target, ...r.filter(x => x.id !== id)]);
+      return prev.filter(i => i.id !== id);
+    });
+  };
+  const restoreItem = (id: string) => {
+    setRemoved(prev => {
+      const target = prev.find(i => i.id === id);
+      if (target) setItems(itemsPrev => [...itemsPrev, target]);
+      return prev.filter(i => i.id !== id);
+    });
+  };
   const startEdit   = (item: DetectedItem) => { setEditingId(item.id); setEditLabel(item.label); setEditAmt(String(item.amount)); };
   const saveEdit    = (id: string) => { setItems(p => p.map(i => i.id === id ? { ...i, label: editLabel, amount: parseFloat(editAmt) || i.amount, confirmed: true } : i)); setEditingId(null); };
   const cancelEdit  = () => setEditingId(null);
@@ -758,6 +805,26 @@ function BillReviewScreen({ simulateLowHistory, onBack, onComplete }: {
           )}
         </div>
 
+        {/* Soft delete restore strip */}
+        {removed.length > 0 && (
+          <div style={{ display:"grid", gap:8 }}>
+            <p style={{ margin:0, fontSize:12, color:T.text3 }}>
+              Removed items (not included). Restore any accidental removals before continuing.
+            </p>
+            {removed.map(item => (
+              <div key={item.id} style={{ border:`1px dashed ${T.redBorder}`, borderRadius:12, background:T.bgNegative, padding:"10px 12px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
+                <div>
+                  <p style={{ margin:0, fontSize:13, fontWeight:600, color:T.red }}>{item.label}</p>
+                  <p style={{ margin:"2px 0 0", fontSize:12, color:T.text3 }}>${item.amount.toFixed(2)} · {item.frequency}</p>
+                </div>
+                <button onClick={()=>restoreItem(item.id)} style={{ height:34, padding:"0 12px", border:`1px solid ${T.redBorder}`, borderRadius:999, background:"#FFF", color:T.red, fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+                  Restore
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Progress summary */}
         <div style={{ display:"flex", alignItems:"center", gap:8 }}>
           <div style={{ flex:1, height:4, borderRadius:999, background:T.border, overflow:"hidden" }}>
@@ -779,6 +846,106 @@ function BillReviewScreen({ simulateLowHistory, onBack, onComplete }: {
           )}
         </div>
 
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SCREEN 4B-INCOME — PAYCHECK CONFIRMATION
+═══════════════════════════════════════════════════════════════════ */
+function PaycheckConfirmScreen({
+  signal, onBack, onConfirmDetected, onUseManual, onUseDirectDeposit,
+}: {
+  signal: PaycheckSignal;
+  onBack: () => void;
+  onConfirmDetected: () => void;
+  onUseManual: () => void;
+  onUseDirectDeposit: () => void;
+}) {
+  const [amount, setAmount] = useState("1320");
+  const [freq, setFreq]     = useState<PayFreq>("biweekly");
+  const [date, setDate]     = useState("Apr 14");
+  const [showManual, setShowManual] = useState(false);
+  const [manualAmount, setManualAmount] = useState("1200");
+  const [manualFreq, setManualFreq] = useState<PayFreq>("biweekly");
+  const [manualDate, setManualDate] = useState("Apr 15");
+
+  if (signal === "detected") {
+    return (
+      <div>
+        <NavBar title="" onBack={onBack} />
+        <div style={{ padding:"4px 20px 28px", display:"grid", gap:18 }}>
+          <div style={{ display:"grid", gap:8 }}>
+            <h1 style={{ margin:0, fontSize:22, lineHeight:"30px", fontWeight:600, letterSpacing:"-0.5px" }}>We found your paycheck</h1>
+            <p style={{ margin:0, fontSize:14, color:T.text2, lineHeight:"20px" }}>
+              Confirm or edit this so we can calculate your Cash Flow with higher confidence.
+            </p>
+          </div>
+          <div style={{ background:T.bgCard, border:`1px solid ${T.border}`, borderRadius:16, padding:"14px 14px", display:"grid", gap:10 }}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+              <span style={{ fontSize:13, color:T.text3, fontWeight:600 }}>Detected source</span>
+              <span style={{ fontSize:12, color:T.tealDark, background:T.bgAccent, borderRadius:999, padding:"3px 9px", fontWeight:600 }}>Payroll match</span>
+            </div>
+            <p style={{ margin:0, fontSize:15, fontWeight:600 }}>MoneyLion Financial (Employer)</p>
+            <div style={{ position:"relative" }}>
+              <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", fontSize:13, color:T.text3 }}>$</span>
+              <input type="number" value={amount} onChange={e=>setAmount(e.target.value)} style={{ width:"100%", height:42, border:`1px solid ${T.border}`, borderRadius:10, paddingLeft:24, fontSize:14, fontWeight:600, fontFamily:"inherit", background:T.bgPage, outline:"none" }} />
+            </div>
+            <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+              {FREQ_OPTIONS.map(o => <Chip key={o.value} label={o.label} selected={freq===o.value} onClick={()=>{ setFreq(o.value); setDate(PAY_DATES[o.value][0]); }} />)}
+            </div>
+            <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+              {PAY_DATES[freq].map(d => <Chip key={d} label={d} selected={date===d} onClick={()=>setDate(d)} />)}
+            </div>
+          </div>
+          <PrimaryBtn label="Confirm income and continue →" onClick={onConfirmDetected} bg={T.tealDark} />
+          <button onClick={onUseManual} style={{ background:"none", border:"none", color:T.text2, fontSize:13, cursor:"pointer", padding:0, fontFamily:"inherit" }}>
+            This looks wrong — I will enter it manually
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <NavBar title="" onBack={onBack} />
+      <div style={{ padding:"4px 20px 28px", display:"grid", gap:18 }}>
+        <div style={{ display:"grid", gap:8 }}>
+          <h1 style={{ margin:0, fontSize:22, lineHeight:"30px", fontWeight:600, letterSpacing:"-0.5px" }}>We could not find a clear paycheck yet</h1>
+          <p style={{ margin:0, fontSize:14, color:T.text2, lineHeight:"20px" }}>
+            We found bills, but your income pattern is unclear. Set up direct deposit for the most accurate Cash Flow.
+          </p>
+        </div>
+        <div style={{ background:T.bgAccent, border:`1px solid ${T.border}`, borderRadius:16, padding:"14px 14px", display:"grid", gap:8 }}>
+          <p style={{ margin:0, fontSize:13, color:T.text2 }}>Recommended</p>
+          <p style={{ margin:0, fontSize:15, fontWeight:600 }}>Set up direct deposit with RoarMoney</p>
+          <p style={{ margin:0, fontSize:13, color:T.text2, lineHeight:"18px" }}>Income updates automatically and improves confidence in your weekly number.</p>
+        </div>
+        <PrimaryBtn label="Set up direct deposit →" onClick={onUseDirectDeposit} bg={T.tealDark} />
+        {showManual ? (
+          <div style={{ background:T.bgCard, border:`1px solid ${T.border}`, borderRadius:16, padding:"12px 12px", display:"grid", gap:10 }}>
+            <p style={{ margin:0, fontSize:12, color:T.text3, fontWeight:600 }}>ENTER PAYCHECK MANUALLY</p>
+            <div style={{ position:"relative" }}>
+              <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", fontSize:13, color:T.text3 }}>$</span>
+              <input type="number" value={manualAmount} onChange={e=>setManualAmount(e.target.value)} style={{ width:"100%", height:40, border:`1px solid ${T.border}`, borderRadius:10, paddingLeft:24, fontSize:14, fontFamily:"inherit", background:T.bgPage, outline:"none" }} />
+            </div>
+            <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+              {FREQ_OPTIONS.map(o => <Chip key={o.value} label={o.label} selected={manualFreq===o.value} onClick={()=>{ setManualFreq(o.value); setManualDate(PAY_DATES[o.value][0]); }} />)}
+            </div>
+            <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+              {PAY_DATES[manualFreq].map(d => <Chip key={d} label={d} selected={manualDate===d} onClick={()=>setManualDate(d)} />)}
+            </div>
+            <button onClick={onUseManual} style={{ height:40, border:`1px solid ${T.tealDark}`, borderRadius:999, background:"transparent", color:T.tealDark, fontWeight:600, fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>
+              Save manual paycheck and continue
+            </button>
+          </div>
+        ) : (
+          <button onClick={()=>setShowManual(true)} style={{ background:"none", border:"none", color:T.tealDark, fontSize:13, fontWeight:600, cursor:"pointer", textAlign:"left", padding:0, fontFamily:"inherit" }}>
+            Enter paycheck manually instead
+          </button>
+        )}
       </div>
     </div>
   );
@@ -897,7 +1064,7 @@ function LinkBankPrompt({ accountState, onLinkBank }: { accountState: AccountSta
   if (dismissed) return null;
 
   const isManual    = accountState === "manual-only";
-  const isRoarOnly  = accountState === "roarmoney-only";
+  const isRoarOnly  = accountState === "roarmoney-only" || accountState === "roarmoney-dd";
   if (!isManual && !isRoarOnly) return null;
 
   const heading = isManual
@@ -943,11 +1110,16 @@ function LinkBankPrompt({ accountState, onLinkBank }: { accountState: AccountSta
   );
 }
 
-function CashFlowScreen({ accountState, risk, linkedOverlay, isJointAccount, jointShare, onBack, onLinkBank }: { accountState:AccountState; risk:RiskLevel; linkedOverlay:LinkedOverlay; isJointAccount:boolean; jointShare:number|null; onBack:()=>void; onLinkBank:()=>void }) {
+function CashFlowScreen({
+  accountState, risk, linkedOverlay, linkedIncomeStatus, isJointAccount, jointShare, onBack, onLinkBank,
+}: {
+  accountState:AccountState; risk:RiskLevel; linkedOverlay:LinkedOverlay; linkedIncomeStatus:LinkedIncomeStatus;
+  isJointAccount:boolean; jointShare:number|null; onBack:()=>void; onLinkBank:()=>void;
+}) {
   const profile =
     accountState === "manual-only" ? "manual"
-      : accountState === "roarmoney-only" ? "partial"
-      : "linked";
+      : accountState === "bv-linked" ? "linked"
+      : "partial";
   const m = CF[profile][risk];
   const [expanded, setExpanded] = useState(false);
 
@@ -959,6 +1131,9 @@ function CashFlowScreen({ accountState, risk, linkedOverlay, isJointAccount, joi
   const confidenceBadge: Confidence =
     isReconnect     ? "Unreliable"
     : isStillLearning ? "Still learning"
+    : profile === "partial" ? "Partial view"
+    : profile === "linked" && (linkedIncomeStatus === "confirmed" || linkedIncomeStatus === "dd") ? "High confidence"
+    : profile === "linked" ? "Medium confidence"
     : m.confidence;
 
   return (
@@ -1026,6 +1201,13 @@ function CashFlowScreen({ accountState, risk, linkedOverlay, isJointAccount, joi
             <div style={{ background:T.bgWarning, border:`1px solid ${T.yellowBorder}`, borderRadius:12, padding:"10px 12px" }}>
               <p style={{ margin:0, fontSize:13, fontWeight:600, color:T.yellow }}>We are still building your pattern</p>
               <p style={{ margin:"2px 0 0", fontSize:12, color:T.text2 }}>Your number gets more accurate over the next few weeks as we learn your spending habits.</p>
+            </div>
+          )}
+
+          {profile === "linked" && linkedIncomeStatus !== "confirmed" && linkedIncomeStatus !== "dd" && !isReconnect && !isStillLearning && (
+            <div style={{ background:T.bgWarning, border:`1px solid ${T.yellowBorder}`, borderRadius:12, padding:"10px 12px" }}>
+              <p style={{ margin:0, fontSize:13, fontWeight:600, color:T.yellow }}>Income signal needs confirmation</p>
+              <p style={{ margin:"2px 0 0", fontSize:12, color:T.text2 }}>Bills are linked, but paycheck timing or amount still needs confirmation for full-confidence Cash Flow.</p>
             </div>
           )}
 
@@ -1189,6 +1371,7 @@ const SCREEN_LABELS: Record<Screen, string> = {
   "link-connecting":  "Connecting",
   "joint-account":    "Joint account",
   "bill-review":      "Bill review",
+  "paycheck-confirm": "Paycheck confirm",
   "manual-paycheck":  "Manual: paycheck",
   "manual-bills":     "Manual: bills",
   "cashflow":         "Cash Flow",
@@ -1200,10 +1383,12 @@ export default function App() {
   const [risk,    setRisk]    = useState<RiskLevel>("tight");
   const [linkedOverlay, setLinkedOverlay] = useState<LinkedOverlay>("none");
   const [bank,    setBank]    = useState<string | null>(null);
+  const [linkedIncomeStatus, setLinkedIncomeStatus] = useState<LinkedIncomeStatus>("unconfirmed");
   const [isJointAccount, setIsJointAccount] = useState(false);
   const [jointShare,     setJointShare]     = useState<number | null>(null);
   const [simulateJoint,  setSimulateJoint]  = useState(false);
   const [simulateLowHistory, setSimulateLowHistory] = useState(false);
+  const [paycheckSignal, setPaycheckSignal] = useState<PaycheckSignal>("detected");
 
   const go = (s: Screen) => setScreen(s);
 
@@ -1216,6 +1401,7 @@ export default function App() {
 
   const handleConnected = () => {
     setAccountState("bv-linked");
+    setLinkedIncomeStatus("unconfirmed");
     if (simulateJoint) go("joint-account");
     else go("bill-review");
   };
@@ -1224,6 +1410,25 @@ export default function App() {
     setIsJointAccount(true);
     setJointShare(share);
     go("bill-review");
+  };
+
+  const handleBillReviewComplete = () => {
+    go("paycheck-confirm");
+  };
+
+  const handleIncomeDetectedConfirm = () => {
+    setLinkedIncomeStatus("confirmed");
+    go("cashflow");
+  };
+
+  const handleIncomeManualConfirm = () => {
+    setLinkedIncomeStatus("manual");
+    go("cashflow");
+  };
+
+  const handleIncomeDDConfirm = () => {
+    setLinkedIncomeStatus("dd");
+    go("cashflow");
   };
 
   const handleManualDone = () => { setAccountState("manual-only"); go("cashflow"); };
@@ -1300,7 +1505,15 @@ export default function App() {
             </div>
           </div>
 
-          <button onClick={()=>{ go("accounts"); setAccountState("new-user"); setRisk("tight"); setLinkedOverlay("none"); setIsJointAccount(false); setJointShare(null); setSimulateJoint(false); setSimulateLowHistory(false); }} style={{ height:40, border:`1px solid ${T.border}`, borderRadius:999, background:"transparent", fontSize:13, fontWeight:600, color:T.text2, cursor:"pointer", fontFamily:"inherit" }}>↺ Reset flow</button>
+          <div>
+            <p style={{ margin:"0 0 8px", fontSize:10, fontWeight:600, color:T.text3, textTransform:"uppercase", letterSpacing:"0.6px" }}>Paycheck signal</p>
+            <div style={{ display:"grid", gap:6 }}>
+              <Chip label="Detected"     selected={paycheckSignal==="detected"}     onClick={()=>setPaycheckSignal("detected")} />
+              <Chip label="Not detected" selected={paycheckSignal==="not-detected"} onClick={()=>setPaycheckSignal("not-detected")} />
+            </div>
+          </div>
+
+          <button onClick={()=>{ go("accounts"); setAccountState("new-user"); setRisk("tight"); setLinkedOverlay("none"); setLinkedIncomeStatus("unconfirmed"); setIsJointAccount(false); setJointShare(null); setSimulateJoint(false); setSimulateLowHistory(false); setPaycheckSignal("detected"); }} style={{ height:40, border:`1px solid ${T.border}`, borderRadius:999, background:"transparent", fontSize:13, fontWeight:600, color:T.text2, cursor:"pointer", fontFamily:"inherit" }}>↺ Reset flow</button>
 
           <p style={{ margin:0, fontSize:10, color:T.text3, lineHeight:"15px" }}>Font: DM Sans<br/>Production: Baton Turbo<br/>Tokens: MLDS 4.0</p>
         </div>
@@ -1317,15 +1530,16 @@ export default function App() {
 
           {/* Scrollable screen content */}
           <div style={{ flex:1, overflowY:"auto", maxHeight:730 }}>
-            {screen === "accounts"        && <AccountsScreen    accountState={accountState}  onWidgetTap={handleWidgetTap} />}
+            {screen === "accounts"        && <AccountsScreen    accountState={accountState} linkedIncomeStatus={linkedIncomeStatus} onWidgetTap={handleWidgetTap} />}
             {screen === "splash"          && <SplashScreen      onClose={()=>go("accounts")} onLinkBank={()=>go("link-bank")} onManual={()=>go("manual-paycheck")} />}
             {screen === "link-bank"       && <LinkBankScreen    onBack={()=>go("splash")}    onSelect={handleBankSelect} />}
             {screen === "link-connecting" && <LinkConnectingScreen bank={bank ?? "Chase"} onConnected={handleConnected} />}
             {screen === "joint-account"   && <JointAccountScreen bank={bank ?? "Chase"} onConfirm={handleJointConfirm} />}
-            {screen === "bill-review"     && <BillReviewScreen simulateLowHistory={simulateLowHistory} onBack={()=>go("link-connecting")} onComplete={()=>go("cashflow")} />}
+            {screen === "bill-review"     && <BillReviewScreen simulateLowHistory={simulateLowHistory} onBack={()=>go("link-connecting")} onComplete={handleBillReviewComplete} />}
+            {screen === "paycheck-confirm"&& <PaycheckConfirmScreen signal={paycheckSignal} onBack={()=>go("bill-review")} onConfirmDetected={handleIncomeDetectedConfirm} onUseManual={handleIncomeManualConfirm} onUseDirectDeposit={handleIncomeDDConfirm} />}
             {screen === "manual-paycheck" && <ManualPaycheckScreen onBack={()=>go("splash")} onContinue={()=>go("manual-bills")} />}
             {screen === "manual-bills"    && <ManualBillsScreen  onBack={()=>go("manual-paycheck")} onDone={handleManualDone} />}
-            {screen === "cashflow"        && <CashFlowScreen     accountState={accountState} risk={risk} linkedOverlay={linkedOverlay} isJointAccount={isJointAccount} jointShare={jointShare} onBack={()=>go("accounts")} onLinkBank={()=>go("link-bank")} />}
+            {screen === "cashflow"        && <CashFlowScreen     accountState={accountState} risk={risk} linkedOverlay={linkedOverlay} linkedIncomeStatus={linkedIncomeStatus} isJointAccount={isJointAccount} jointShare={jointShare} onBack={()=>go("accounts")} onLinkBank={()=>go("link-bank")} />}
           </div>
 
           {/* Home indicator */}

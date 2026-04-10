@@ -1,7 +1,7 @@
 # Cash Flow — Build Phases
 
 > **Purpose:** Working reference for design and build order. Update status markers as each phase completes.
-> **Last updated:** April 9, 2026 (Phases 1–5 complete)
+> **Last updated:** April 9, 2026 (Phases 1–5 complete + Confidence/Paycheck patch)
 > **Owner:** Jaf Inas / PFM Team
 
 ---
@@ -306,6 +306,31 @@ All decisions below are confirmed. No further alignment needed before building.
 
 ---
 
+## Phase 5A — Confidence + Paycheck Validation Patch 🟡 ✅
+
+**Why this patch:** Usability testing surfaced two critical gaps: (1) confidence was overstated without paycheck confirmation, and (2) bill deletion had no recovery path.
+
+### What was built
+- New screen: `"paycheck-confirm"` inserted after bill review and before CF for newly BV-linked users ✅
+- Two paycheck states (simulated in controls):
+  - `Detected`: editable detected paycheck, confirm CTA ✅
+  - `Not detected`: **primary** direct deposit CTA, secondary manual paycheck fallback ✅
+- Confidence model update:
+  - `roarmoney-only` + `roarmoney-dd` now `Partial view` (not high confidence) ✅
+  - `bv-linked` defaults to `Medium confidence` until paycheck is confirmed ✅
+  - High confidence only after paycheck confirmation (detected or DD path) ✅
+- Bill review delete safety:
+  - `×` now soft-deletes into a restore strip
+  - User can tap `Restore` before continuing
+  - Removed list is visibly persistent on screen ✅
+
+### Success criteria ✅
+- Newly linked users must pass paycheck confirmation before first CF view ✅
+- No accidental bill delete is irreversible within the review step ✅
+- Confidence badges now reflect financial-picture completeness, not just data freshness ✅
+
+---
+
 ## Phase 6 — Manual → BV-Link Reconciliation 🔴 ⬜
 
 **Why sixth:** The most complex and novel screen in the project. No precedent in the current prototype. Depends on Phase 5 (bill review gate) being complete since reconciliation follows it in the flow. Requires the most careful UX thinking before building.
@@ -453,5 +478,5 @@ gate             reconciliation                   states + settings
 
 ---
 
-*Last updated: April 2026*
+*Last updated: April 9, 2026*
 *Source: Design sessions with [Jaf Inas / PFM Team] — Cash Flow v1*
