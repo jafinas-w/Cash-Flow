@@ -1,0 +1,721 @@
+{
+  "tldrawFileFormatVersion": 1,
+  "schema": {
+    "schemaVersion": 2,
+    "sequences": {
+      "com.tldraw.store": 4,
+      "com.tldraw.asset": 1,
+      "com.tldraw.camera": 1,
+      "com.tldraw.document": 2,
+      "com.tldraw.instance": 25,
+      "com.tldraw.instance_page_state": 5,
+      "com.tldraw.page": 1,
+      "com.tldraw.instance_presence": 5,
+      "com.tldraw.pointer": 1,
+      "com.tldraw.shape": 4,
+      "com.tldraw.asset.bookmark": 2,
+      "com.tldraw.asset.image": 5,
+      "com.tldraw.asset.video": 5,
+      "com.tldraw.shape.arrow": 5,
+      "com.tldraw.shape.bookmark": 2,
+      "com.tldraw.shape.draw": 2,
+      "com.tldraw.shape.embed": 4,
+      "com.tldraw.shape.frame": 0,
+      "com.tldraw.shape.geo": 9,
+      "com.tldraw.shape.group": 0,
+      "com.tldraw.shape.highlight": 1,
+      "com.tldraw.shape.image": 4,
+      "com.tldraw.shape.line": 5,
+      "com.tldraw.shape.note": 8,
+      "com.tldraw.shape.text": 2,
+      "com.tldraw.shape.video": 2
+    }
+  },
+  "records": [
+    {
+      "gridSize": 10,
+      "name": "",
+      "meta": {},
+      "id": "document:document",
+      "typeName": "document"
+    },
+    {
+      "meta": {},
+      "id": "page:page",
+      "name": "Cash Flow User Flow",
+      "index": "a1",
+      "typeName": "page"
+    },
+
+    {
+      "x": 1120, "y": 10,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:lbl_legend",
+      "type": "text",
+      "props": {
+        "color": "black", "size": "m", "w": 220,
+        "text": "BUILD STATUS",
+        "font": "sans", "align": "start", "autoSize": true, "scale": 1
+      },
+      "parentId": "page:page", "index": "a2", "typeName": "shape"
+    },
+
+    {
+      "x": 1120, "y": 46,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:leg_built",
+      "type": "geo",
+      "props": {
+        "w": 230, "h": 44, "geo": "rectangle",
+        "color": "green", "labelColor": "black", "fill": "semi", "dash": "solid",
+        "size": "s", "font": "sans", "text": "✅  Built (Phases 0–2)",
+        "align": "middle", "verticalAlign": "middle", "growY": 0, "url": ""
+      },
+      "parentId": "page:page", "index": "a3", "typeName": "shape"
+    },
+
+    {
+      "x": 1120, "y": 100,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:leg_phase3",
+      "type": "geo",
+      "props": {
+        "w": 230, "h": 44, "geo": "rectangle",
+        "color": "yellow", "labelColor": "black", "fill": "semi", "dash": "solid",
+        "size": "s", "font": "sans", "text": "⚠️  Phase 3 – in progress",
+        "align": "middle", "verticalAlign": "middle", "growY": 0, "url": ""
+      },
+      "parentId": "page:page", "index": "a4", "typeName": "shape"
+    },
+
+    {
+      "x": 1120, "y": 154,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:leg_notbuilt",
+      "type": "geo",
+      "props": {
+        "w": 230, "h": 44, "geo": "rectangle",
+        "color": "grey", "labelColor": "black", "fill": "semi", "dash": "dashed",
+        "size": "s", "font": "sans", "text": "⬜  Phases 4–8 – not built",
+        "align": "middle", "verticalAlign": "middle", "growY": 0, "url": ""
+      },
+      "parentId": "page:page", "index": "a5", "typeName": "shape"
+    },
+
+    {
+      "x": 1120, "y": 208,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:leg_cf",
+      "type": "geo",
+      "props": {
+        "w": 230, "h": 44, "geo": "rectangle",
+        "color": "blue", "labelColor": "black", "fill": "semi", "dash": "solid",
+        "size": "s", "font": "sans", "text": "🔵  Cash Flow screen",
+        "align": "middle", "verticalAlign": "middle", "growY": 0, "url": ""
+      },
+      "parentId": "page:page", "index": "a6", "typeName": "shape"
+    },
+
+    {
+      "x": 1120, "y": 280,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:note_direct",
+      "type": "text",
+      "props": {
+        "color": "grey", "size": "s", "w": 250,
+        "text": "Note: Non-new users bypass\nSplash and go directly from\nAccounts to their CF screen\nvariant (manual-only,\nRoarMoney-only, BV-linked).",
+        "font": "sans", "align": "start", "autoSize": true, "scale": 1
+      },
+      "parentId": "page:page", "index": "a7", "typeName": "shape"
+    },
+
+    {
+      "x": 1120, "y": 420,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:note_d6",
+      "type": "text",
+      "props": {
+        "color": "grey", "size": "s", "w": 250,
+        "text": "D6: Bill Review Gate is\nmandatory after every\nsuccessful BV link before\nSTS is shown for the\nfirst time.",
+        "font": "sans", "align": "start", "autoSize": true, "scale": 1
+      },
+      "parentId": "page:page", "index": "a8", "typeName": "shape"
+    },
+
+    {
+      "x": 1120, "y": 560,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:note_d1",
+      "type": "text",
+      "props": {
+        "color": "grey", "size": "s", "w": 250,
+        "text": "D1: Link Bank Prompt is\ndismissible. Recovery path:\nSettings > Cash Flow >\nImprove your accuracy.",
+        "font": "sans", "align": "start", "autoSize": true, "scale": 1
+      },
+      "parentId": "page:page", "index": "a9", "typeName": "shape"
+    },
+
+    {
+      "x": 100, "y": -50,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:lbl_h1",
+      "type": "text",
+      "props": {
+        "color": "grey", "size": "s", "w": 800,
+        "text": "ONBOARDING / SETUP FLOWS",
+        "font": "sans", "align": "start", "autoSize": true, "scale": 1
+      },
+      "parentId": "page:page", "index": "b1", "typeName": "shape"
+    },
+
+    {
+      "x": 80, "y": 870,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:lbl_h2",
+      "type": "text",
+      "props": {
+        "color": "grey", "size": "s", "w": 800,
+        "text": "CASH FLOW SCREENS",
+        "font": "sans", "align": "start", "autoSize": true, "scale": 1
+      },
+      "parentId": "page:page", "index": "b2", "typeName": "shape"
+    },
+
+    {
+      "x": 80, "y": 1028,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:lbl_h3",
+      "type": "text",
+      "props": {
+        "color": "grey", "size": "s", "w": 700,
+        "text": "RISK STATES  (CF: Linked only — Phase 3 adds Still Learning, Reconnect Needed, Missing Transactions)",
+        "font": "sans", "align": "start", "autoSize": true, "scale": 1
+      },
+      "parentId": "page:page", "index": "b3", "typeName": "shape"
+    },
+
+    {
+      "x": 490, "y": 10,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:accounts",
+      "type": "geo",
+      "props": {
+        "w": 220, "h": 60, "geo": "rectangle",
+        "color": "green", "labelColor": "black", "fill": "semi", "dash": "solid",
+        "size": "s", "font": "sans", "text": "Accounts Page",
+        "align": "middle", "verticalAlign": "middle", "growY": 0, "url": ""
+      },
+      "parentId": "page:page", "index": "b4", "typeName": "shape"
+    },
+
+    {
+      "x": 490, "y": 150,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:splash",
+      "type": "geo",
+      "props": {
+        "w": 220, "h": 70, "geo": "rectangle",
+        "color": "green", "labelColor": "black", "fill": "semi", "dash": "solid",
+        "size": "s", "font": "sans", "text": "Feature Intro (Splash)\n2 paths: Link Bank | Manual",
+        "align": "middle", "verticalAlign": "middle", "growY": 0, "url": ""
+      },
+      "parentId": "page:page", "index": "b5", "typeName": "shape"
+    },
+
+    {
+      "x": 100, "y": 310,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:link_bank",
+      "type": "geo",
+      "props": {
+        "w": 220, "h": 60, "geo": "rectangle",
+        "color": "green", "labelColor": "black", "fill": "semi", "dash": "solid",
+        "size": "s", "font": "sans", "text": "Link Bank\n(Choose Institution)",
+        "align": "middle", "verticalAlign": "middle", "growY": 0, "url": ""
+      },
+      "parentId": "page:page", "index": "b6", "typeName": "shape"
+    },
+
+    {
+      "x": 100, "y": 440,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:connecting",
+      "type": "geo",
+      "props": {
+        "w": 220, "h": 60, "geo": "rectangle",
+        "color": "green", "labelColor": "black", "fill": "semi", "dash": "solid",
+        "size": "s", "font": "sans", "text": "Connecting...\nConnected! ✓",
+        "align": "middle", "verticalAlign": "middle", "growY": 0, "url": ""
+      },
+      "parentId": "page:page", "index": "b7", "typeName": "shape"
+    },
+
+    {
+      "x": -230, "y": 440,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:joint",
+      "type": "geo",
+      "props": {
+        "w": 210, "h": 60, "geo": "rectangle",
+        "color": "grey", "labelColor": "black", "fill": "semi", "dash": "dashed",
+        "size": "s", "font": "sans", "text": "Joint Account\nInterstitial [Phase 4]",
+        "align": "middle", "verticalAlign": "middle", "growY": 0, "url": ""
+      },
+      "parentId": "page:page", "index": "b8", "typeName": "shape"
+    },
+
+    {
+      "x": 100, "y": 580,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:bill_review",
+      "type": "geo",
+      "props": {
+        "w": 220, "h": 80, "geo": "rectangle",
+        "color": "grey", "labelColor": "black", "fill": "semi", "dash": "dashed",
+        "size": "s", "font": "sans", "text": "Bill Review Gate\nReview detected bills\n[Phase 5]",
+        "align": "middle", "verticalAlign": "middle", "growY": 0, "url": ""
+      },
+      "parentId": "page:page", "index": "b9", "typeName": "shape"
+    },
+
+    {
+      "x": 100, "y": 750,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:reconcile",
+      "type": "geo",
+      "props": {
+        "w": 220, "h": 80, "geo": "rectangle",
+        "color": "grey", "labelColor": "black", "fill": "semi", "dash": "dashed",
+        "size": "s", "font": "sans", "text": "Manual → BV\nReconciliation\n[Phase 6, conditional]",
+        "align": "middle", "verticalAlign": "middle", "growY": 0, "url": ""
+      },
+      "parentId": "page:page", "index": "c1", "typeName": "shape"
+    },
+
+    {
+      "x": 790, "y": 310,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:manual_p",
+      "type": "geo",
+      "props": {
+        "w": 220, "h": 60, "geo": "rectangle",
+        "color": "green", "labelColor": "black", "fill": "semi", "dash": "solid",
+        "size": "s", "font": "sans", "text": "Manual: Paycheck\n(Step 1 of 2)",
+        "align": "middle", "verticalAlign": "middle", "growY": 0, "url": ""
+      },
+      "parentId": "page:page", "index": "c2", "typeName": "shape"
+    },
+
+    {
+      "x": 790, "y": 440,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:manual_b",
+      "type": "geo",
+      "props": {
+        "w": 220, "h": 60, "geo": "rectangle",
+        "color": "green", "labelColor": "black", "fill": "semi", "dash": "solid",
+        "size": "s", "font": "sans", "text": "Manual: Bills\n(Step 2 of 2)",
+        "align": "middle", "verticalAlign": "middle", "growY": 0, "url": ""
+      },
+      "parentId": "page:page", "index": "c3", "typeName": "shape"
+    },
+
+    {
+      "x": 80, "y": 900,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:cf_linked",
+      "type": "geo",
+      "props": {
+        "w": 260, "h": 80, "geo": "rectangle",
+        "color": "blue", "labelColor": "black", "fill": "semi", "dash": "solid",
+        "size": "s", "font": "sans", "text": "Cash Flow: Linked\nSafe to Spend · High Confidence",
+        "align": "middle", "verticalAlign": "middle", "growY": 0, "url": ""
+      },
+      "parentId": "page:page", "index": "c4", "typeName": "shape"
+    },
+
+    {
+      "x": 760, "y": 580,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:cf_manual",
+      "type": "geo",
+      "props": {
+        "w": 260, "h": 80, "geo": "rectangle",
+        "color": "blue", "labelColor": "black", "fill": "semi", "dash": "solid",
+        "size": "s", "font": "sans", "text": "Cash Flow: Manual\nExpected After Bills · Manual Estimate",
+        "align": "middle", "verticalAlign": "middle", "growY": 0, "url": ""
+      },
+      "parentId": "page:page", "index": "c5", "typeName": "shape"
+    },
+
+    {
+      "x": 460, "y": 900,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:cf_partial",
+      "type": "geo",
+      "props": {
+        "w": 260, "h": 80, "geo": "rectangle",
+        "color": "blue", "labelColor": "black", "fill": "semi", "dash": "solid",
+        "size": "s", "font": "sans", "text": "Cash Flow: Partial\nSafe to Spend · RoarMoney Only",
+        "align": "middle", "verticalAlign": "middle", "growY": 0, "url": ""
+      },
+      "parentId": "page:page", "index": "c6", "typeName": "shape"
+    },
+
+    {
+      "x": 760, "y": 750,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:link_prompt",
+      "type": "geo",
+      "props": {
+        "w": 260, "h": 70, "geo": "rectangle",
+        "color": "light-green", "labelColor": "black", "fill": "semi", "dash": "solid",
+        "size": "s", "font": "sans", "text": "Link Bank Prompt [D1]\nDismissible · Tap CTA goes to\nLink Bank flow",
+        "align": "middle", "verticalAlign": "middle", "growY": 0, "url": ""
+      },
+      "parentId": "page:page", "index": "c7", "typeName": "shape"
+    },
+
+    {
+      "x": 80, "y": 1340,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:phase8",
+      "type": "geo",
+      "props": {
+        "w": 700, "h": 56, "geo": "rectangle",
+        "color": "grey", "labelColor": "black", "fill": "semi", "dash": "dashed",
+        "size": "s", "font": "sans", "text": "Phase 8 — Polish, Edge Cases, Accessibility, Metrics (final phase, depends on all previous)",
+        "align": "middle", "verticalAlign": "middle", "growY": 0, "url": ""
+      },
+      "parentId": "page:page", "index": "c8", "typeName": "shape"
+    },
+
+    {
+      "x": 40, "y": 1065,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:ahead",
+      "type": "geo",
+      "props": {
+        "w": 170, "h": 60, "geo": "rectangle",
+        "color": "green", "labelColor": "black", "fill": "semi", "dash": "solid",
+        "size": "s", "font": "sans", "text": "You're Ahead\n(teal state)",
+        "align": "middle", "verticalAlign": "middle", "growY": 0, "url": ""
+      },
+      "parentId": "page:page", "index": "c9", "typeName": "shape"
+    },
+
+    {
+      "x": 230, "y": 1065,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:tight",
+      "type": "geo",
+      "props": {
+        "w": 170, "h": 60, "geo": "rectangle",
+        "color": "yellow", "labelColor": "black", "fill": "semi", "dash": "solid",
+        "size": "s", "font": "sans", "text": "Budget's Tight\n(yellow state)",
+        "align": "middle", "verticalAlign": "middle", "growY": 0, "url": ""
+      },
+      "parentId": "page:page", "index": "d1", "typeName": "shape"
+    },
+
+    {
+      "x": 420, "y": 1065,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:short",
+      "type": "geo",
+      "props": {
+        "w": 180, "h": 60, "geo": "rectangle",
+        "color": "red", "labelColor": "black", "fill": "semi", "dash": "solid",
+        "size": "s", "font": "sans", "text": "May Come Up Short\n(red state)",
+        "align": "middle", "verticalAlign": "middle", "growY": 0, "url": ""
+      },
+      "parentId": "page:page", "index": "d2", "typeName": "shape"
+    },
+
+    {
+      "x": 420, "y": 1210,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:instacash",
+      "type": "geo",
+      "props": {
+        "w": 220, "h": 60, "geo": "rectangle",
+        "color": "light-red", "labelColor": "black", "fill": "semi", "dash": "solid",
+        "size": "s", "font": "sans", "text": "Instacash Nudge\n(Linked + Short state only)",
+        "align": "middle", "verticalAlign": "middle", "growY": 0, "url": ""
+      },
+      "parentId": "page:page", "index": "d3", "typeName": "shape"
+    },
+
+    {
+      "x": 600, "y": 70,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:arr_a1",
+      "type": "arrow",
+      "props": {
+        "dash": "solid", "size": "s", "fill": "none",
+        "color": "black", "labelColor": "black",
+        "bend": 0,
+        "start": { "type": "point", "x": 0, "y": 0 },
+        "end": { "type": "point", "x": 0, "y": 80 },
+        "arrowheadStart": "none", "arrowheadEnd": "arrow",
+        "text": "", "font": "sans", "labelPosition": 0.5
+      },
+      "parentId": "page:page", "index": "d4", "typeName": "shape"
+    },
+
+    {
+      "x": 545, "y": 220,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:arr_a2",
+      "type": "arrow",
+      "props": {
+        "dash": "solid", "size": "s", "fill": "none",
+        "color": "black", "labelColor": "black",
+        "bend": 0,
+        "start": { "type": "point", "x": 0, "y": 0 },
+        "end": { "type": "point", "x": -335, "y": 90 },
+        "arrowheadStart": "none", "arrowheadEnd": "arrow",
+        "text": "Link bank", "font": "sans", "labelPosition": 0.5
+      },
+      "parentId": "page:page", "index": "d5", "typeName": "shape"
+    },
+
+    {
+      "x": 655, "y": 220,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:arr_a3",
+      "type": "arrow",
+      "props": {
+        "dash": "solid", "size": "s", "fill": "none",
+        "color": "black", "labelColor": "black",
+        "bend": 0,
+        "start": { "type": "point", "x": 0, "y": 0 },
+        "end": { "type": "point", "x": 245, "y": 90 },
+        "arrowheadStart": "none", "arrowheadEnd": "arrow",
+        "text": "Enter manually", "font": "sans", "labelPosition": 0.5
+      },
+      "parentId": "page:page", "index": "d6", "typeName": "shape"
+    },
+
+    {
+      "x": 210, "y": 370,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:arr_a4",
+      "type": "arrow",
+      "props": {
+        "dash": "solid", "size": "s", "fill": "none",
+        "color": "black", "labelColor": "black",
+        "bend": 0,
+        "start": { "type": "point", "x": 0, "y": 0 },
+        "end": { "type": "point", "x": 0, "y": 70 },
+        "arrowheadStart": "none", "arrowheadEnd": "arrow",
+        "text": "", "font": "sans", "labelPosition": 0.5
+      },
+      "parentId": "page:page", "index": "d7", "typeName": "shape"
+    },
+
+    {
+      "x": 100, "y": 470,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:arr_a5",
+      "type": "arrow",
+      "props": {
+        "dash": "dashed", "size": "s", "fill": "none",
+        "color": "grey", "labelColor": "grey",
+        "bend": 0,
+        "start": { "type": "point", "x": 0, "y": 0 },
+        "end": { "type": "point", "x": -130, "y": 0 },
+        "arrowheadStart": "none", "arrowheadEnd": "arrow",
+        "text": "If joint [D8]", "font": "sans", "labelPosition": 0.5
+      },
+      "parentId": "page:page", "index": "d8", "typeName": "shape"
+    },
+
+    {
+      "x": 210, "y": 500,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:arr_a6",
+      "type": "arrow",
+      "props": {
+        "dash": "solid", "size": "s", "fill": "none",
+        "color": "grey", "labelColor": "grey",
+        "bend": 0,
+        "start": { "type": "point", "x": 0, "y": 0 },
+        "end": { "type": "point", "x": 0, "y": 80 },
+        "arrowheadStart": "none", "arrowheadEnd": "arrow",
+        "text": "Required [D6]", "font": "sans", "labelPosition": 0.5
+      },
+      "parentId": "page:page", "index": "d9", "typeName": "shape"
+    },
+
+    {
+      "x": 210, "y": 660,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:arr_a7",
+      "type": "arrow",
+      "props": {
+        "dash": "dashed", "size": "s", "fill": "none",
+        "color": "grey", "labelColor": "grey",
+        "bend": 0,
+        "start": { "type": "point", "x": 0, "y": 0 },
+        "end": { "type": "point", "x": 0, "y": 90 },
+        "arrowheadStart": "none", "arrowheadEnd": "arrow",
+        "text": "If had manual data", "font": "sans", "labelPosition": 0.5
+      },
+      "parentId": "page:page", "index": "e1", "typeName": "shape"
+    },
+
+    {
+      "x": 210, "y": 830,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:arr_a8",
+      "type": "arrow",
+      "props": {
+        "dash": "solid", "size": "s", "fill": "none",
+        "color": "grey", "labelColor": "grey",
+        "bend": 0,
+        "start": { "type": "point", "x": 0, "y": 0 },
+        "end": { "type": "point", "x": 0, "y": 70 },
+        "arrowheadStart": "none", "arrowheadEnd": "arrow",
+        "text": "", "font": "sans", "labelPosition": 0.5
+      },
+      "parentId": "page:page", "index": "e2", "typeName": "shape"
+    },
+
+    {
+      "x": 320, "y": 660,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:arr_a9",
+      "type": "arrow",
+      "props": {
+        "dash": "dashed", "size": "s", "fill": "none",
+        "color": "grey", "labelColor": "grey",
+        "bend": 80,
+        "start": { "type": "point", "x": 0, "y": 0 },
+        "end": { "type": "point", "x": 10, "y": 240 },
+        "arrowheadStart": "none", "arrowheadEnd": "arrow",
+        "text": "No prior manual data", "font": "sans", "labelPosition": 0.5
+      },
+      "parentId": "page:page", "index": "e3", "typeName": "shape"
+    },
+
+    {
+      "x": 900, "y": 370,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:arr_a10",
+      "type": "arrow",
+      "props": {
+        "dash": "solid", "size": "s", "fill": "none",
+        "color": "black", "labelColor": "black",
+        "bend": 0,
+        "start": { "type": "point", "x": 0, "y": 0 },
+        "end": { "type": "point", "x": 0, "y": 70 },
+        "arrowheadStart": "none", "arrowheadEnd": "arrow",
+        "text": "", "font": "sans", "labelPosition": 0.5
+      },
+      "parentId": "page:page", "index": "e4", "typeName": "shape"
+    },
+
+    {
+      "x": 900, "y": 500,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:arr_a11",
+      "type": "arrow",
+      "props": {
+        "dash": "solid", "size": "s", "fill": "none",
+        "color": "black", "labelColor": "black",
+        "bend": 0,
+        "start": { "type": "point", "x": 0, "y": 0 },
+        "end": { "type": "point", "x": -10, "y": 80 },
+        "arrowheadStart": "none", "arrowheadEnd": "arrow",
+        "text": "", "font": "sans", "labelPosition": 0.5
+      },
+      "parentId": "page:page", "index": "e5", "typeName": "shape"
+    },
+
+    {
+      "x": 890, "y": 660,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:arr_a12",
+      "type": "arrow",
+      "props": {
+        "dash": "solid", "size": "s", "fill": "none",
+        "color": "black", "labelColor": "black",
+        "bend": 0,
+        "start": { "type": "point", "x": 0, "y": 0 },
+        "end": { "type": "point", "x": 0, "y": 90 },
+        "arrowheadStart": "none", "arrowheadEnd": "arrow",
+        "text": "Shown within CF screen", "font": "sans", "labelPosition": 0.5
+      },
+      "parentId": "page:page", "index": "e6", "typeName": "shape"
+    },
+
+    {
+      "x": 210, "y": 980,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:arr_a13",
+      "type": "arrow",
+      "props": {
+        "dash": "solid", "size": "s", "fill": "none",
+        "color": "green", "labelColor": "black",
+        "bend": 0,
+        "start": { "type": "point", "x": 0, "y": 0 },
+        "end": { "type": "point", "x": -85, "y": 85 },
+        "arrowheadStart": "none", "arrowheadEnd": "arrow",
+        "text": "", "font": "sans", "labelPosition": 0.5
+      },
+      "parentId": "page:page", "index": "e7", "typeName": "shape"
+    },
+
+    {
+      "x": 210, "y": 980,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:arr_a14",
+      "type": "arrow",
+      "props": {
+        "dash": "solid", "size": "s", "fill": "none",
+        "color": "yellow", "labelColor": "black",
+        "bend": 0,
+        "start": { "type": "point", "x": 0, "y": 0 },
+        "end": { "type": "point", "x": 105, "y": 85 },
+        "arrowheadStart": "none", "arrowheadEnd": "arrow",
+        "text": "", "font": "sans", "labelPosition": 0.5
+      },
+      "parentId": "page:page", "index": "e8", "typeName": "shape"
+    },
+
+    {
+      "x": 210, "y": 980,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:arr_a15",
+      "type": "arrow",
+      "props": {
+        "dash": "solid", "size": "s", "fill": "none",
+        "color": "red", "labelColor": "black",
+        "bend": 0,
+        "start": { "type": "point", "x": 0, "y": 0 },
+        "end": { "type": "point", "x": 300, "y": 85 },
+        "arrowheadStart": "none", "arrowheadEnd": "arrow",
+        "text": "", "font": "sans", "labelPosition": 0.5
+      },
+      "parentId": "page:page", "index": "e9", "typeName": "shape"
+    },
+
+    {
+      "x": 510, "y": 1125,
+      "rotation": 0, "isLocked": false, "opacity": 1, "meta": {},
+      "id": "shape:arr_a16",
+      "type": "arrow",
+      "props": {
+        "dash": "solid", "size": "s", "fill": "none",
+        "color": "red", "labelColor": "black",
+        "bend": 0,
+        "start": { "type": "point", "x": 0, "y": 0 },
+        "end": { "type": "point", "x": 20, "y": 85 },
+        "arrowheadStart": "none", "arrowheadEnd": "arrow",
+        "text": "Linked + Short only", "font": "sans", "labelPosition": 0.5
+      },
+      "parentId": "page:page", "index": "f1", "typeName": "shape"
+    }
+  ]
+}

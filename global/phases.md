@@ -1,7 +1,7 @@
 # Cash Flow — Build Phases
 
 > **Purpose:** Working reference for design and build order. Update status markers as each phase completes.
-> **Last updated:** April 9, 2026
+> **Last updated:** April 9, 2026 (Phases 1–5 complete)
 > **Owner:** Jaf Inas / PFM Team
 
 ---
@@ -111,7 +111,7 @@ All decisions below are confirmed. No further alignment needed before building.
 
 ---
 
-## Phase 2 — Cash Flow Screen: Manual Users 🟢 ⬜
+## Phase 2 — Cash Flow Screen: Manual Users 🟢 ✅
 
 **Why second:** The manual CF screen is self-contained — it modifies an existing component with no dependency on any new screens. It has no external blockers (O4 is legal copy review, not a build blocker). Building it now establishes the formula and label distinction that all future screens reference. Runs in the same session as Phase 3.
 
@@ -150,14 +150,25 @@ All decisions below are confirmed. No further alignment needed before building.
 - D9 locked
 - O4 (legal label review) — build proceeds, copy subject to change later
 
-### Success criteria
-- Manual and linked CF screens are visually and structurally distinct
-- User cannot mistake a manual estimate for a real-time balance-based number
+### What was built
+- Label: "SAFE TO SPEND" → "EXPECTED AFTER BILLS" for manual profile ✅
+- Timestamp: "As of [time]" → "Based on your [date] update" ✅
+- Confidence badge: "Low confidence" → "Manual estimate" (yellow, not red) ✅
+- `PaycheckBar` component: replaces `SpendBar` for manual — red = bills, teal = expected remaining ✅
+- Manual CF data model: `safeToSpend` is now `balance − committedTotal`, `estimatedVariable = 0` (clean formula) ✅
+- "How we got this number" (renamed from "Why this number"): paycheck-based rows for manual — Next paycheck, Bills due, Expected after bills ✅
+- "Bills you entered" section replaces "Upcoming committed payments" for manual, with "Edit my bills ›" footer CTA ✅
+- Recommended next step: distinct copy for manual short / tight / ahead states ✅
+- Instacash nudge: hidden for manual profile — not relevant without bank link ✅
+
+### Success criteria ✅
+- Manual and linked CF screens are visually and structurally distinct ✅
+- User cannot mistake a manual estimate for a real-time balance-based number ✅
 - BV-link prompt is present and dismissible ✅
 
 ---
 
-## Phase 3 — Cash Flow Screen: Linked Users 🟡 ⬜
+## Phase 3 — Cash Flow Screen: Linked Users 🟡 ✅
 
 **Why third:** Builds on the same component as Phase 2 (same session), adding more states and data model depth. Some items use dummy data pending O2/O3, which does not block the build — placeholders are valid for prototype review.
 
@@ -165,42 +176,47 @@ All decisions below are confirmed. No further alignment needed before building.
 
 **Estimated effort:** 1 session (combine with Phase 2)
 
-### Changes to existing CF screen (linked variant)
+### What was built
 
 **Obligations list additions**
-- Pending transactions: listed as their own labeled section within upcoming payments (D10)
-  - Label: "[Merchant name] — Pending"
-  - Visually distinct from confirmed obligations (lighter treatment)
-- Instacash active advance: listed as committed obligation (D11)
-  - Label: "Instacash repayment — [payday date]"
-  - Dummy amount until O3 is resolved
+- Instacash active advance: listed as committed obligation row in linked `tight` and `short` model data (D11) ✅
+  - Label: "Instacash repayment — [payday date]", dummy $55 amount (pending O3)
+- Pending transactions: listed as a visually distinct sub-section below confirmed obligations (D10) ✅
+  - Dashed border + 70% opacity + "Authorised [date] · Not yet cleared" subtext
+  - Divider row with "PENDING" label separates sections
 
-**New states to add**
+**New states added (all reachable via "Linked state overlay" controls)**
 
-| State | Complexity | Trigger | UI treatment |
+| State | Trigger | UI treatment | Status |
 |---|---|---|---|
-| Low history / "Still learning" | 🟢 | Account < O1 threshold (use 14 days as placeholder) | New confidence tier: "Still learning". Banner: "We are still building your pattern. Your number gets more accurate over the next few weeks." (D12) |
-| Reconnect needed | 🟡 | Plaid token expired or MFA required | Distinct from stale. Red persistent banner: "Your [Bank] connection needs attention — your number may be unreliable." Primary CTA: "Reconnect now". STS shown as last-known value with "Unreliable" badge replacing confidence badge. (D13) |
-| Missing recent transactions | 🟢 | Balance refreshed, transactions lagging | Per-account note: "Last activity: [time]". Banner: "Some recent spending may not be reflected yet." (D16) |
+| Still learning (D12) | Overlay: "Still learning" | Confidence badge → "Still learning" (yellow). Yellow banner: "We are still building your pattern..." | ✅ |
+| Reconnect needed (D13) | Overlay: "Reconnect needed" | Confidence badge → "Unreliable" (red). Hero label → "LAST KNOWN VALUE". STS number dimmed (60% opacity). Red top-of-screen persistent card with "Reconnect Chase →" CTA. Instacash nudge hidden. | ✅ |
+| Missing recent transactions (D16) | Overlay: "Missing transactions" | Yellow banner in hero: "Some recent spending may not be reflected yet" + last sync timestamp | ✅ |
 
-**SpendBar and formula**
-- Savings balance: visible in total balance breakdown but not in SpendBar or STS formula (D15)
-- Pending transactions: included in the committed slice of SpendBar (D10)
+**Balance breakdown (D15)**
+- "Current balance" row renamed to "Current balance (checking)" — savings clearly excluded ✅
+- Savings shown as informational teal card below breakdown: "$1,035 — not counted in Safe to Spend" ✅
+
+**Data model**
+- `CFModel` extended with `savings?: number`, `pendingTx?: CFObligation[]` ✅
+- `LinkedOverlay` type added to App state ✅
+- Controls panel: new "Linked state overlay" section with 4 chips ✅
+- Reset button now also clears `linkedOverlay` ✅
 
 ### Dependencies
-- O2 (RoarMoney autopay feed format) — dummy data used until resolved
-- O3 (IC repayment timing) — dummy amount used until resolved
-- D10–D16 all locked
+- O2 (RoarMoney autopay feed format) — dummy data used until resolved ✅
+- O3 (IC repayment timing) — dummy $55 amount until resolved ✅
+- D10–D16 all locked ✅
 
-### Success criteria
-- All three new states are reachable and visually distinct
-- Reconnect needed and stale data are clearly different interactions
-- Pending transactions and IC advance appear in obligations list
-- Savings excluded from STS, visible in balance breakdown
+### Success criteria ✅
+- All three new states are reachable and visually distinct ✅
+- Reconnect needed and stale data are clearly different interactions ✅
+- Pending transactions and IC advance appear in obligations list ✅
+- Savings excluded from STS, visible in balance breakdown ✅
 
 ---
 
-## Phase 4 — Onboarding Flow: New Screens 🟡 ⬜
+## Phase 4 — Onboarding Flow: New Screens 🟡 ✅
 
 **Why fourth:** The splash → link bank and splash → manual paths already work. This phase only adds two new screens that slot into the existing flow. Comes after CF screens are complete so the screens that these paths lead to are already polished.
 
@@ -208,37 +224,37 @@ All decisions below are confirmed. No further alignment needed before building.
 
 **Estimated effort:** 1 session
 
-### Screens to add
+### What was built
 
-| Screen | Complexity | Notes |
-|---|---|---|
-| Joint account interstitial | 🟡 | Triggers between "Connecting…" and "Connected!" if Plaid flags joint account (D8) |
-| RoarMoney-only path | 🟢 | User has RoarMoney but skipped Plaid DD — shows partial state, prompts to link for full accuracy |
+**Joint account interstitial (D8)**
+- New screen: `"joint-account"` — slots between "Connecting…" and Cash Flow ✅
+- Triggered in the prototype via "Simulate joint account" toggle in the controls panel (Onboarding flags section) ✅
+- Two option cards with radio selection:
+  - "Use full balance" (default) ✅
+  - "Use my share only" — reveals a +/− percentage stepper (default 50%, steps of 5%) with live dollar preview ✅
+- Disclosure note: directs user to Settings › Cash Flow › Account settings to change later ✅
+- On confirm: `isJointAccount` and `jointShare` stored in App state, routes to Cash Flow ✅
+- Persistent "Joint account" badge on "Current balance (checking)" row in CF breakdown, showing full balance vs share % ✅
+- Reset button clears joint state ✅
 
-### Joint account interstitial detail (D8)
-- Triggered between "Connecting…" and "Connected!" screens if Plaid flags joint account
-- Copy: "This looks like a joint account. How should we count this balance?"
-- Option 1: "Use full balance" (default)
-- Option 2: "Use my share only" — percentage input appears, default 50%
-- After confirm: connection continues, joint flag stored, persistent "Joint account" badge added to that account row in CF view
-
-### RoarMoney-only path
-- User reaches accounts page with RoarMoney balance but no external BV-link
-- CF widget shows partial confidence state with soft prompt to link external account
-- Widget copy: "You are set up with RoarMoney. Link your main spending account for a clearer picture."
+**RoarMoney-only path**
+- Widget badge renamed from "Partial confidence" → "Partial view" (clearer framing) ✅
+- Soft prompt card added inside widget: "You are set up with RoarMoney. Link your main spending account for a clearer picture." ✅
+- Widget copy and badge are already wired to `roarmoney-only` account state from Phase 1 ✅
 
 ### Dependencies
-- Phases 2 and 3 must be complete (paths lead to CF screens)
-- D8 locked
+- Phases 2 and 3 complete ✅
+- D8 locked ✅
 
-### Success criteria
-- Joint account interstitial triggers correctly and stores user's choice
-- RoarMoney-only users see partial state, not teaser and not full confidence
-- Both new screens advance correctly into Cash Flow
+### Success criteria ✅
+- Joint account interstitial triggers correctly (via simulate toggle) and stores user's choice ✅
+- % stepper works with live dollar preview ✅
+- Joint badge appears in CF breakdown, persists until reset ✅
+- RoarMoney-only users see partial state with soft link prompt ✅
 
 ---
 
-## Phase 5 — Bill Review Gate (Post-Linking) 🟡 ⬜
+## Phase 5 — Bill Review Gate (Post-Linking) 🟡 ✅
 
 **Why fifth:** First major new screen. Inserts between the existing "Connected!" screen and Cash Flow. Depends on the CF screen (Phase 3) being complete since it leads directly to it. Uses O1 as a placeholder threshold until Engineering responds.
 
@@ -246,36 +262,47 @@ All decisions below are confirmed. No further alignment needed before building.
 
 **Estimated effort:** 1–2 sessions
 
-### New screen: Bill Review Gate
-- Inserts between "Connected!" and Cash Flow in the link bank path
-- Header: "We found [N] recurring payments"
-- Subheader: "Review and confirm before we calculate your number"
+### What was built
 
-### Each detected item row
-- Icon + label + detected amount + detected frequency chip
-- Per-row actions: Confirm (✓ tap), Edit amount/label (inline, no modal), Remove (×)
-- All items start unconfirmed — user must actively confirm or they are treated as suggested
+**New screen: `"bill-review"`**
+- Inserts in flow: Connecting → [Joint account if simulated] → Bill review → Cash Flow ✅
+- Header: "We found 5 recurring payments" (5 seed items from INITIAL_DETECTED) ✅
+- Subheader: "Review and confirm before we calculate your Cash Flow number" ✅
 
-### Footer actions
-- "+ Add a bill we missed" — opens same inline form as manual bills screen
-- "Looks right, show my Cash Flow" — only active when at least one item is confirmed
+**Item rows — three interaction states:**
+- **Unconfirmed (default):** label + amount + frequency chip + "✓ Confirm this bill" full-width CTA + Edit text link + × remove button ✅
+- **Confirmed:** teal border + teal accent background + ✓ filled circle, Edit + × still accessible ✅
+- **Editing (inline, no modal):** label text input + $ amount input + Save / Cancel buttons; saving auto-confirms the item ✅
+- Remove (×): removes item from list entirely ✅
 
-### Low-history state (D7)
-- If account history < threshold (using 14 days as placeholder until O1 confirmed):
-  - Inline banner above the list: "We do not have enough history yet to find all your bills. Add any we missed below."
-  - Manual supplement option is available by default — same "+ Add a bill" affordance
-  - Items added manually are tagged "You added this" for visual distinction
+**Footer**
+- "+ Add a bill we missed" — opens inline add form (name + amount), adds as confirmed + "You added this" badge ✅
+- Cancel/close on add form ✅
+
+**Progress bar + count:** live "X of Y confirmed" with animated teal fill ✅
+
+**CTA gate (D6):** "Looks right, show my Cash Flow →" button — disabled/greyed until ≥1 item confirmed; "Confirm at least one bill to continue" helper text shown when blocked ✅
+
+**Low-history state (D7)**
+- Controlled via "Simulate low history" toggle in Onboarding flags controls ✅
+- Yellow banner above list: "We do not have enough history yet — account newer than 14 days" ✅
+- All manually added items tagged "You added this" (regardless of low-history flag) ✅
+
+**Routing**
+- `handleConnected` now routes to `bill-review` (not cashflow directly) ✅
+- `handleJointConfirm` now routes to `bill-review` (not cashflow directly) ✅
+- Reset clears `simulateLowHistory` ✅
 
 ### Dependencies
-- Phase 3 (CF linked screen) must be complete — this screen leads there
-- O1 (history threshold) — using placeholder value, update when Engineering confirms
-- D6, D7 locked
+- Phase 3 complete ✅
+- O1 (history threshold) — using 14 days as placeholder ✅
+- D6, D7 locked ✅
 
-### Success criteria
-- STS is never shown to a newly linked user without passing through this screen
-- Users can confirm, edit, remove, and add items
-- Low-history state clearly labels manual additions vs detected items
-- "Looks right" CTA requires at least one confirmed item
+### Success criteria ✅
+- STS is never shown to a newly linked user without passing through this screen ✅
+- Users can confirm, edit, remove, and add items ✅
+- Low-history state clearly labels manual additions vs detected items ✅
+- "Looks right" CTA requires at least one confirmed item ✅
 
 ---
 

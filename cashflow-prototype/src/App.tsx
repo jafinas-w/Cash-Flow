@@ -26,21 +26,28 @@ const T = {
 ═══════════════════════════════════════════════════════════════════ */
 type Screen =
   | "accounts" | "splash"
-  | "link-bank" | "link-connecting"
+  | "link-bank" | "link-connecting" | "joint-account" | "bill-review"
   | "manual-paycheck" | "manual-bills"
   | "cashflow";
 
 type AccountState = "new-user" | "manual-only" | "roarmoney-only" | "roarmoney-dd" | "bv-linked";
 type RiskLevel     = "ahead" | "tight" | "short";
 type PayFreq       = "weekly" | "biweekly" | "semimonthly" | "monthly";
-type Confidence    = "High confidence" | "Medium confidence" | "Low confidence";
+type Confidence    = "High confidence" | "Medium confidence" | "Low confidence" | "Manual estimate" | "Still learning" | "Unreliable";
+type LinkedOverlay = "none" | "still-learning" | "reconnect" | "missing-tx";
 
 interface Bill { id: string; label: string; amount: string; enabled: boolean; dueDay: number }
-interface CFObligation { label: string; amount: number; date: string }
+interface CFObligation { label: string; amount: number; date: string; pending?: boolean }
+interface DetectedItem {
+  id: string; label: string; amount: number; frequency: string;
+  confirmed: boolean; userAdded?: boolean;
+}
 interface CFModel {
   balance: number; safeToSpend: number; committedTotal: number;
   estimatedVariable: number; buffer: number; confidence: Confidence;
   asOf: string; stale: boolean; nextPayday: string; committed: CFObligation[];
+  savings?: number;
+  pendingTx?: CFObligation[];
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -83,16 +90,30 @@ const DEFAULT_BILLS: Bill[] = [
   { id: "util",  label: "Utilities",       amount: "120", enabled: false, dueDay: 18 },
 ];
 
+const INITIAL_DETECTED: DetectedItem[] = [
+  { id:"rent",    label:"Rent / Mortgage", amount:850,   frequency:"Monthly",  confirmed:false },
+  { id:"phone",   label:"T-Mobile",        amount:78,    frequency:"Monthly",  confirmed:false },
+  { id:"spotify", label:"Spotify",         amount:10.99, frequency:"Monthly",  confirmed:false },
+  { id:"netflix", label:"Netflix",         amount:15.49, frequency:"Monthly",  confirmed:false },
+  { id:"gym",     label:"Planet Fitness",  amount:24.99, frequency:"Monthly",  confirmed:false },
+];
+
 const CF: Record<"linked"|"manual"|"partial", Record<RiskLevel, CFModel>> = {
   linked: {
-    ahead: { balance:1492, safeToSpend:342,  committedTotal:955, estimatedVariable:105, buffer:90, confidence:"High confidence",   asOf:"Today, 11:42 AM",  stale:false, nextPayday:"Apr 14", committed:[{label:"Rent",amount:850,date:"Apr 11"},{label:"Phone bill",amount:78,date:"Apr 12"},{label:"Subscriptions",amount:27,date:"Apr 13"}] },
-    tight: { balance:1138, safeToSpend:89,   committedTotal:955, estimatedVariable:94,  buffer:0,  confidence:"High confidence",   asOf:"Today, 11:42 AM",  stale:false, nextPayday:"Apr 14", committed:[{label:"Rent",amount:850,date:"Apr 11"},{label:"Phone bill",amount:78,date:"Apr 12"},{label:"Subscriptions",amount:27,date:"Apr 13"}] },
-    short: { balance:992,  safeToSpend:-43,  committedTotal:955, estimatedVariable:90,  buffer:0,  confidence:"High confidence",   asOf:"Today, 11:42 AM",  stale:false, nextPayday:"Apr 14", committed:[{label:"Rent",amount:850,date:"Apr 11"},{label:"Phone bill",amount:78,date:"Apr 12"},{label:"Subscriptions",amount:27,date:"Apr 13"}] },
+    ahead: { balance:1492, savings:1035, safeToSpend:342,  committedTotal:955, estimatedVariable:105, buffer:90, confidence:"High confidence",   asOf:"Today, 11:42 AM",  stale:false, nextPayday:"Apr 14",
+      committed:[{label:"Rent",amount:850,date:"Apr 11"},{label:"Phone bill",amount:78,date:"Apr 12"},{label:"Subscriptions",amount:27,date:"Apr 13"}],
+      pendingTx:[{label:"Walmart",amount:32,date:"Today",pending:true},{label:"Starbucks",amount:8,date:"Today",pending:true}] },
+    tight: { balance:1138, savings:1035, safeToSpend:89,   committedTotal:955, estimatedVariable:94,  buffer:0,  confidence:"High confidence",   asOf:"Today, 11:42 AM",  stale:false, nextPayday:"Apr 14",
+      committed:[{label:"Rent",amount:850,date:"Apr 11"},{label:"Phone bill",amount:78,date:"Apr 12"},{label:"Subscriptions",amount:27,date:"Apr 13"},{label:"Instacash repayment",amount:55,date:"Apr 14"}],
+      pendingTx:[{label:"Amazon",amount:67,date:"Today",pending:true}] },
+    short: { balance:992,  savings:1035, safeToSpend:-43,  committedTotal:955, estimatedVariable:90,  buffer:0,  confidence:"High confidence",   asOf:"Today, 11:42 AM",  stale:false, nextPayday:"Apr 14",
+      committed:[{label:"Rent",amount:850,date:"Apr 11"},{label:"Phone bill",amount:78,date:"Apr 12"},{label:"Subscriptions",amount:27,date:"Apr 13"},{label:"Instacash repayment",amount:55,date:"Apr 14"}],
+      pendingTx:[{label:"Target",amount:94,date:"Today",pending:true},{label:"Spotify",amount:11,date:"Today",pending:true}] },
   },
   manual: {
-    ahead: { balance:1320, safeToSpend:190,  committedTotal:928, estimatedVariable:130, buffer:0,  confidence:"Low confidence",    asOf:"Entered manually", stale:false, nextPayday:"Apr 15", committed:[{label:"Rent (entered)",amount:850,date:"Apr 11"},{label:"Phone (entered)",amount:78,date:"Apr 12"}] },
-    tight: { balance:1182, safeToSpend:52,   committedTotal:928, estimatedVariable:135, buffer:0,  confidence:"Low confidence",    asOf:"Entered manually", stale:false, nextPayday:"Apr 15", committed:[{label:"Rent (entered)",amount:850,date:"Apr 11"},{label:"Phone (entered)",amount:78,date:"Apr 12"}] },
-    short: { balance:947,  safeToSpend:-88,  committedTotal:928, estimatedVariable:140, buffer:0,  confidence:"Low confidence",    asOf:"Entered manually", stale:false, nextPayday:"Apr 15", committed:[{label:"Rent (entered)",amount:850,date:"Apr 11"},{label:"Phone (entered)",amount:78,date:"Apr 12"}] },
+    ahead: { balance:1320, safeToSpend:392,  committedTotal:928,  estimatedVariable:0, buffer:0, confidence:"Manual estimate", asOf:"Apr 9, 2026", stale:false, nextPayday:"Apr 15", committed:[{label:"Rent",amount:850,date:"Apr 11"},{label:"Phone",amount:78,date:"Apr 12"}] },
+    tight: { balance:1082, safeToSpend:52,   committedTotal:1030, estimatedVariable:0, buffer:0, confidence:"Manual estimate", asOf:"Apr 9, 2026", stale:false, nextPayday:"Apr 15", committed:[{label:"Rent",amount:850,date:"Apr 11"},{label:"Phone",amount:78,date:"Apr 12"},{label:"Streaming",amount:25,date:"Apr 13"},{label:"Gym",amount:40,date:"Apr 14"},{label:"Internet",amount:37,date:"Apr 14"}] },
+    short: { balance:947,  safeToSpend:-88,  committedTotal:1035, estimatedVariable:0, buffer:0, confidence:"Manual estimate", asOf:"Apr 9, 2026", stale:false, nextPayday:"Apr 15", committed:[{label:"Rent",amount:850,date:"Apr 11"},{label:"Phone",amount:78,date:"Apr 12"},{label:"Streaming",amount:25,date:"Apr 13"},{label:"Gym",amount:40,date:"Apr 14"},{label:"Internet",amount:37,date:"Apr 14"},{label:"Car payment",amount:53,date:"Apr 14"}] },
   },
   partial: {
     ahead: { balance:1090, safeToSpend:128,  committedTotal:861, estimatedVariable:120, buffer:0,  confidence:"Medium confidence", asOf:"Today, 2:06 AM",   stale:true,  nextPayday:"Apr 14", committed:[{label:"Rent",amount:850,date:"Apr 11"},{label:"Linked subscription",amount:11,date:"Apr 12"}] },
@@ -109,8 +130,8 @@ const ACCOUNT_BALANCE_DATA = {
 const STATUS_COPY:  Record<RiskLevel, string> = { ahead:"You are ahead",   tight:"Budget is tight",   short:"You may come up short" };
 const STATUS_COLOR: Record<RiskLevel, string> = { ahead:T.tealDark,       tight:T.yellow,            short:T.red                   };
 const STATUS_BG:    Record<RiskLevel, string> = { ahead:T.bgAccent,       tight:T.bgWarning,         short:T.bgNegative            };
-const CONF_COLOR:   Record<Confidence,string> = { "High confidence":T.tealDark, "Medium confidence":T.yellow, "Low confidence":T.red };
-const CONF_BG:      Record<Confidence,string> = { "High confidence":T.bgAccent, "Medium confidence":T.bgWarning, "Low confidence":T.bgNegative };
+const CONF_COLOR:   Record<Confidence,string> = { "High confidence":T.tealDark, "Medium confidence":T.yellow, "Low confidence":T.red, "Manual estimate":T.yellow, "Still learning":T.yellow, "Unreliable":T.red };
+const CONF_BG:      Record<Confidence,string> = { "High confidence":T.bgAccent, "Medium confidence":T.bgWarning, "Low confidence":T.bgNegative, "Manual estimate":T.bgWarning, "Still learning":T.bgWarning, "Unreliable":T.bgNegative };
 
 /* ═══════════════════════════════════════════════════════════════════
    HELPERS
@@ -178,6 +199,28 @@ function SpendBar({ model }: { model:CFModel }) {
   );
 }
 
+function PaycheckBar({ model }: { model: CFModel }) {
+  const paycheck = model.balance;
+  const billsPct   = `${Math.min(100, Math.round((model.committedTotal / paycheck) * 100))}%`;
+  const remainPct  = `${Math.max(0, Math.round((Math.max(0, model.safeToSpend) / paycheck) * 100))}%`;
+  return (
+    <div style={{ display:"grid", gap:8 }}>
+      <div style={{ height:10, borderRadius:999, background:"#EEE", overflow:"hidden", display:"flex" }}>
+        <div style={{ width:billsPct,  background:T.red,        transition:"width 300ms ease" }} />
+        <div style={{ width:remainPct, background:T.tealBright, transition:"width 300ms ease" }} />
+      </div>
+      <div style={{ display:"flex", gap:14 }}>
+        {([["Bills", T.red], ["Expected remaining", T.tealBright]] as [string,string][]).map(([l,c]) => (
+          <div key={l} style={{ display:"flex", alignItems:"center", gap:4 }}>
+            <div style={{ width:8, height:8, borderRadius:999, background:c }} />
+            <span style={{ fontSize:11, color:T.text3, fontWeight:600 }}>{l}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function totalBalanceFor(state: AccountState): number | null {
   if (state === "new-user" || state === "manual-only") return null;
   if (state === "roarmoney-only") return ACCOUNT_BALANCE_DATA.roarmoney.roarMoney;
@@ -222,11 +265,14 @@ function CashFlowWidget({ accountState, onTap }: { accountState:AccountState; on
     <button onClick={onTap} style={card}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
         <span style={{ fontSize:16, fontWeight:600 }}>Cash Flow</span>
-        <Badge label="Partial confidence" color={T.yellow} bg={T.bgWarning} />
+        <Badge label="Partial view" color={T.yellow} bg={T.bgWarning} />
       </div>
       <p style={{ margin:0, fontSize:12, color:T.text3, fontWeight:600 }}>SAFE TO SPEND</p>
       <p style={{ margin:"-8px 0 0 0", fontSize:36, fontWeight:600, letterSpacing:-1 }}>$128</p>
-      <p style={{ margin:"-4px 0 0 0", fontSize:12, color:T.text3 }}>RoarMoney data only · Next paycheck Apr 14</p>
+      <p style={{ margin:"-4px 0 0 0", fontSize:12, color:T.text3 }}>RoarMoney only · Next paycheck Apr 14</p>
+      <div style={{ background:T.bgWarning, borderRadius:12, padding:"10px 12px" }}>
+        <p style={{ margin:0, fontSize:13, color:T.text1 }}>You are set up with RoarMoney. <span style={{ color:T.tealDark, fontWeight:600 }}>Link your main spending account</span> for a clearer picture.</p>
+      </div>
       <div style={{ fontSize:13, color:T.tealDark, fontWeight:600 }}>View details →</div>
     </button>
   );
@@ -569,6 +615,281 @@ function ManualBillsScreen({ onBack, onDone }: { onBack:()=>void; onDone:()=>voi
 }
 
 /* ═══════════════════════════════════════════════════════════════════
+   SCREEN 4B-GATE — BILL REVIEW (D6, D7)
+═══════════════════════════════════════════════════════════════════ */
+function BillReviewScreen({ simulateLowHistory, onBack, onComplete }: {
+  simulateLowHistory: boolean; onBack: () => void; onComplete: () => void;
+}) {
+  const [items, setItems]         = useState<DetectedItem[]>(INITIAL_DETECTED);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editLabel, setEditLabel] = useState("");
+  const [editAmt,   setEditAmt]   = useState("");
+  const [showAdd,   setShowAdd]   = useState(false);
+  const [newLabel,  setNewLabel]  = useState("");
+  const [newAmt,    setNewAmt]    = useState("");
+
+  const confirmedCount = items.filter(i => i.confirmed).length;
+  const canProceed     = confirmedCount > 0;
+
+  const confirmItem = (id: string) => setItems(p => p.map(i => i.id === id ? { ...i, confirmed: true } : i));
+  const removeItem  = (id: string) => setItems(p => p.filter(i => i.id !== id));
+  const startEdit   = (item: DetectedItem) => { setEditingId(item.id); setEditLabel(item.label); setEditAmt(String(item.amount)); };
+  const saveEdit    = (id: string) => { setItems(p => p.map(i => i.id === id ? { ...i, label: editLabel, amount: parseFloat(editAmt) || i.amount, confirmed: true } : i)); setEditingId(null); };
+  const cancelEdit  = () => setEditingId(null);
+  const addManual   = () => {
+    if (!newLabel || !newAmt) return;
+    setItems(p => [...p, { id:`u-${Date.now()}`, label:newLabel, amount:parseFloat(newAmt)||0, frequency:"Monthly", confirmed:true, userAdded:true }]);
+    setNewLabel(""); setNewAmt(""); setShowAdd(false);
+  };
+
+  const rowBase: React.CSSProperties = { borderRadius:14, padding:"12px 14px", display:"grid", gap:8, transition:"all 120ms ease" };
+
+  return (
+    <div>
+      <NavBar title="" onBack={onBack} />
+      <div style={{ padding:"4px 20px 32px", display:"grid", gap:20 }}>
+
+        {/* Header */}
+        <div style={{ display:"grid", gap:6 }}>
+          <h1 style={{ margin:0, fontSize:22, fontWeight:600, lineHeight:"30px", letterSpacing:"-0.5px" }}>
+            We found {INITIAL_DETECTED.length} recurring payments
+          </h1>
+          <p style={{ margin:0, fontSize:14, color:T.text2, lineHeight:"20px" }}>
+            Review and confirm before we calculate your Cash Flow number.
+          </p>
+        </div>
+
+        {/* Low-history banner (D7) */}
+        {simulateLowHistory && (
+          <div style={{ background:T.bgWarning, border:`1px solid ${T.yellowBorder}`, borderRadius:14, padding:"12px 14px", display:"grid", gap:4 }}>
+            <p style={{ margin:0, fontSize:13, fontWeight:600, color:T.yellow }}>We do not have enough history yet</p>
+            <p style={{ margin:0, fontSize:13, color:T.text2, lineHeight:"18px" }}>
+              Your account is newer than 14 days so we may have missed some bills. Add anything below.
+            </p>
+          </div>
+        )}
+
+        {/* Items list */}
+        <div style={{ display:"grid", gap:8 }}>
+          {items.map(item => {
+            const isEditing   = editingId === item.id;
+            const isConfirmed = item.confirmed && !isEditing;
+
+            if (isEditing) return (
+              <div key={item.id} style={{ ...rowBase, background:T.bgCard, border:`1.5px solid ${T.tealDark}` }}>
+                <p style={{ margin:0, fontSize:11, color:T.tealDark, fontWeight:600, letterSpacing:"0.4px" }}>EDITING</p>
+                <input
+                  value={editLabel} onChange={e=>setEditLabel(e.target.value)}
+                  placeholder="Bill name"
+                  style={{ height:40, border:`1px solid ${T.border}`, borderRadius:10, padding:"0 12px", fontSize:14, fontFamily:"inherit", outline:"none", background:T.bgPage }}
+                />
+                <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                  <div style={{ position:"relative", flex:1 }}>
+                    <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", fontSize:13, color:T.text3 }}>$</span>
+                    <input
+                      type="number" value={editAmt} onChange={e=>setEditAmt(e.target.value)}
+                      style={{ width:"100%", height:40, border:`1px solid ${T.border}`, borderRadius:10, paddingLeft:24, fontSize:14, fontFamily:"inherit", outline:"none", background:T.bgPage }}
+                    />
+                  </div>
+                  <button onClick={()=>saveEdit(item.id)} style={{ height:40, padding:"0 18px", border:"none", borderRadius:10, background:T.tealDark, color:"#FFF", fontWeight:600, fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>Save ✓</button>
+                  <button onClick={cancelEdit} style={{ height:40, padding:"0 14px", border:`1px solid ${T.border}`, borderRadius:10, background:"transparent", color:T.text2, fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>Cancel</button>
+                </div>
+              </div>
+            );
+
+            return (
+              <div key={item.id} style={{ ...rowBase, background: isConfirmed ? T.bgAccent : T.bgCard, border:`1.5px solid ${isConfirmed ? T.tealDark : T.border}` }}>
+                <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
+                  {/* Confirm checkbox */}
+                  <button
+                    onClick={() => !isConfirmed && confirmItem(item.id)}
+                    style={{ width:26, height:26, borderRadius:999, border:`2px solid ${isConfirmed ? T.tealDark : "#CCC"}`, background: isConfirmed ? T.tealDark : "transparent", display:"flex", alignItems:"center", justifyContent:"center", cursor: isConfirmed ? "default" : "pointer", flexShrink:0, fontSize:13, fontWeight:700, color:"#FFF", fontFamily:"inherit", marginTop:1 }}
+                  >{isConfirmed ? "✓" : ""}</button>
+
+                  {/* Content */}
+                  <div style={{ flex:1, display:"grid", gap:4 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
+                      <span style={{ fontSize:14, fontWeight:600, color: isConfirmed ? T.tealDark : T.text1 }}>{item.label}</span>
+                      {item.userAdded && (
+                        <span style={{ fontSize:10, fontWeight:600, color:T.tealDark, background:"rgba(0,102,87,0.1)", borderRadius:999, padding:"2px 7px" }}>You added this</span>
+                      )}
+                    </div>
+                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                      <span style={{ fontSize:13, fontWeight:600, color: isConfirmed ? T.tealDark : T.text1 }}>${item.amount.toFixed(2)}</span>
+                      <span style={{ fontSize:11, color:T.text3, background:T.bgPage, border:`1px solid ${T.border}`, borderRadius:999, padding:"2px 8px" }}>{item.frequency}</span>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                    <button onClick={()=>startEdit(item)} style={{ fontSize:12, color:T.text3, background:"none", border:"none", cursor:"pointer", fontFamily:"inherit", padding:"4px 2px" }}>Edit</button>
+                    <button onClick={()=>removeItem(item.id)} style={{ width:28, height:28, borderRadius:999, border:"none", background:"rgba(206,41,63,0.08)", color:T.red, fontSize:14, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"inherit" }}>×</button>
+                  </div>
+                </div>
+
+                {/* Unconfirmed CTA */}
+                {!isConfirmed && (
+                  <button onClick={()=>confirmItem(item.id)} style={{ height:38, border:`1.5px solid ${T.tealDark}`, borderRadius:999, background:"transparent", color:T.tealDark, fontWeight:600, fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>
+                    ✓ Confirm this bill
+                  </button>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Add form */}
+          {showAdd ? (
+            <div style={{ ...rowBase, background:T.bgCard, border:`1.5px solid ${T.tealDark}` }}>
+              <p style={{ margin:0, fontSize:11, color:T.tealDark, fontWeight:600, letterSpacing:"0.4px" }}>ADD A BILL</p>
+              <input placeholder="Bill name" value={newLabel} onChange={e=>setNewLabel(e.target.value)} style={{ height:40, border:`1px solid ${T.border}`, borderRadius:10, padding:"0 12px", fontSize:14, fontFamily:"inherit", outline:"none", background:T.bgPage }} />
+              <div style={{ display:"flex", gap:8 }}>
+                <div style={{ position:"relative", flex:1 }}>
+                  <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", fontSize:13, color:T.text3 }}>$</span>
+                  <input type="number" placeholder="Amount" value={newAmt} onChange={e=>setNewAmt(e.target.value)} style={{ width:"100%", height:40, border:`1px solid ${T.border}`, borderRadius:10, paddingLeft:24, fontSize:14, fontFamily:"inherit", outline:"none", background:T.bgPage }} />
+                </div>
+                <button onClick={addManual} style={{ height:40, padding:"0 18px", border:"none", borderRadius:10, background:T.tealDark, color:"#FFF", fontWeight:600, fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>Add</button>
+                <button onClick={()=>{ setShowAdd(false); setNewLabel(""); setNewAmt(""); }} style={{ height:40, padding:"0 14px", border:`1px solid ${T.border}`, borderRadius:10, background:"transparent", color:T.text2, fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={()=>setShowAdd(true)} style={{ background:"none", border:`1.5px dashed ${T.border}`, borderRadius:14, padding:"14px", fontSize:13, color:T.tealDark, fontWeight:600, cursor:"pointer", textAlign:"center", fontFamily:"inherit" }}>
+              + Add a bill we missed
+            </button>
+          )}
+        </div>
+
+        {/* Progress summary */}
+        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+          <div style={{ flex:1, height:4, borderRadius:999, background:T.border, overflow:"hidden" }}>
+            <div style={{ height:"100%", width:`${Math.round((confirmedCount / Math.max(items.length, 1)) * 100)}%`, background:T.tealDark, borderRadius:999, transition:"width 200ms ease" }} />
+          </div>
+          <span style={{ fontSize:12, color:T.text3, whiteSpace:"nowrap" }}>{confirmedCount} of {items.length} confirmed</span>
+        </div>
+
+        {/* CTA — gated on at least 1 confirmed */}
+        <div style={{ display:"grid", gap:8 }}>
+          <button
+            onClick={canProceed ? onComplete : undefined}
+            style={{ height:52, border:"none", borderRadius:999, background: canProceed ? T.tealDark : T.border, color: canProceed ? "#FFF" : T.text3, fontWeight:600, fontSize:15, cursor: canProceed ? "pointer" : "default", fontFamily:"inherit", transition:"all 120ms ease" }}
+          >
+            Looks right, show my Cash Flow →
+          </button>
+          {!canProceed && (
+            <p style={{ margin:0, fontSize:12, color:T.text3, textAlign:"center" }}>Confirm at least one bill to continue.</p>
+          )}
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SCREEN 4C — JOINT ACCOUNT INTERSTITIAL (D8)
+═══════════════════════════════════════════════════════════════════ */
+function JointAccountScreen({ bank, onConfirm }: { bank: string; onConfirm: (share: number | null) => void }) {
+  const [choice, setChoice] = useState<"full" | "share">("full");
+  const [pct, setPct] = useState(50);
+
+  const OptionCard = ({
+    title, desc, selected, onClick, children,
+  }: {
+    id?: string; title: string; desc: string; selected: boolean;
+    onClick: () => void; children?: React.ReactNode;
+  }) => (
+    <button
+      onClick={onClick}
+      style={{
+        background: selected ? T.bgAccent : T.bgCard,
+        border: `1.5px solid ${selected ? T.tealDark : T.border}`,
+        borderRadius: 16, padding: "14px 16px", textAlign: "left",
+        cursor: "pointer", display: "grid", gap: 6, fontFamily: "inherit",
+        transition: "all 120ms ease", width: "100%",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{
+          width: 20, height: 20, borderRadius: 999, border: `2px solid ${selected ? T.tealDark : "#CCC"}`,
+          background: selected ? T.tealDark : "transparent", flexShrink: 0,
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          {selected && <div style={{ width: 8, height: 8, borderRadius: 999, background: "#FFF" }} />}
+        </div>
+        <span style={{ fontSize: 14, fontWeight: 600, color: T.text1 }}>{title}</span>
+      </div>
+      <p style={{ margin: "0 0 0 30px", fontSize: 13, lineHeight: "18px", color: T.text2 }}>{desc}</p>
+      {children}
+    </button>
+  );
+
+  return (
+    <div>
+      <NavBar title="" />
+      <div style={{ padding: "4px 20px 32px", display: "grid", gap: 24 }}>
+
+        {/* Header */}
+        <div style={{ display: "grid", gap: 10 }}>
+          <div style={{ width: 48, height: 48, borderRadius: 16, background: T.bgWarning, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>👥</div>
+          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 600, lineHeight: "32px", letterSpacing: "-0.5px" }}>This looks like a joint account</h1>
+          <p style={{ margin: 0, fontSize: 15, color: T.text2, lineHeight: "22px" }}>
+            We detected that your <strong>{bank}</strong> account may be shared. How should we count this balance in your Cash Flow?
+          </p>
+        </div>
+
+        {/* Options */}
+        <div style={{ display: "grid", gap: 10 }}>
+          <OptionCard
+            id="full"
+            title="Use full balance"
+            desc="Count the entire account balance as yours. Useful if you manage all the money in this account."
+            selected={choice === "full"}
+            onClick={() => setChoice("full")}
+          />
+          <OptionCard
+            id="share"
+            title="Use my share only"
+            desc="Count only your portion. We will apply your chosen percentage to the balance."
+            selected={choice === "share"}
+            onClick={() => setChoice("share")}
+          >
+            {choice === "share" && (
+              <div style={{ margin: "8px 0 0 30px", display: "flex", alignItems: "center", gap: 12 }}>
+                <button
+                  onClick={e => { e.stopPropagation(); setPct(p => Math.max(5, p - 5)); }}
+                  style={{ width: 36, height: 36, borderRadius: 999, border: `1.5px solid ${T.border}`, background: T.bgPage, fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "inherit" }}
+                >−</button>
+                <div style={{ textAlign: "center", minWidth: 56 }}>
+                  <p style={{ margin: 0, fontSize: 22, fontWeight: 600, color: T.tealDark }}>{pct}%</p>
+                  <p style={{ margin: 0, fontSize: 11, color: T.text3 }}>my share</p>
+                </div>
+                <button
+                  onClick={e => { e.stopPropagation(); setPct(p => Math.min(95, p + 5)); }}
+                  style={{ width: 36, height: 36, borderRadius: 999, border: `1.5px solid ${T.border}`, background: T.bgPage, fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "inherit" }}
+                >+</button>
+                <p style={{ margin: 0, fontSize: 13, color: T.text2 }}>
+                  = <strong style={{ color: T.text1 }}>${Math.round(1684 * (pct / 100)).toLocaleString()}</strong> counted
+                </p>
+              </div>
+            )}
+          </OptionCard>
+        </div>
+
+        {/* Disclosure note */}
+        <p style={{ margin: 0, fontSize: 12, color: T.text3, lineHeight: "18px", padding: "0 2px" }}>
+          Your choice is saved and shown as a badge on this account in your Cash Flow view. You can change it anytime in Settings › Cash Flow › Account settings.
+        </p>
+
+        <PrimaryBtn
+          label="Confirm and continue →"
+          onClick={() => onConfirm(choice === "full" ? null : pct)}
+          bg={T.tealDark}
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
    SCREEN 5 — CASH FLOW FEATURE
 ═══════════════════════════════════════════════════════════════════ */
 function LinkBankPrompt({ accountState, onLinkBank }: { accountState: AccountState; onLinkBank: () => void }) {
@@ -622,7 +943,7 @@ function LinkBankPrompt({ accountState, onLinkBank }: { accountState: AccountSta
   );
 }
 
-function CashFlowScreen({ accountState, risk, onBack, onLinkBank }: { accountState:AccountState; risk:RiskLevel; onBack:()=>void; onLinkBank:()=>void }) {
+function CashFlowScreen({ accountState, risk, linkedOverlay, isJointAccount, jointShare, onBack, onLinkBank }: { accountState:AccountState; risk:RiskLevel; linkedOverlay:LinkedOverlay; isJointAccount:boolean; jointShare:number|null; onBack:()=>void; onLinkBank:()=>void }) {
   const profile =
     accountState === "manual-only" ? "manual"
       : accountState === "roarmoney-only" ? "partial"
@@ -630,39 +951,98 @@ function CashFlowScreen({ accountState, risk, onBack, onLinkBank }: { accountSta
   const m = CF[profile][risk];
   const [expanded, setExpanded] = useState(false);
 
+  const isLinked      = profile !== "manual";
+  const isReconnect   = isLinked && linkedOverlay === "reconnect";
+  const isStillLearning = isLinked && linkedOverlay === "still-learning";
+  const isMissingTx   = isLinked && linkedOverlay === "missing-tx";
+
+  const confidenceBadge: Confidence =
+    isReconnect     ? "Unreliable"
+    : isStillLearning ? "Still learning"
+    : m.confidence;
+
   return (
     <div>
       <NavBar title="Cash Flow" onBack={onBack} />
       <div style={{ padding:"4px 16px 28px", display:"grid", gap:12 }}>
 
+        {/* Reconnect needed — top-of-screen persistent alert (D13) */}
+        {isReconnect && (
+          <div style={{ background:T.bgNegative, border:`1.5px solid ${T.redBorder}`, borderRadius:20, padding:16, display:"grid", gap:10 }}>
+            <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
+              <span style={{ fontSize:18, lineHeight:"22px" }}>⚠️</span>
+              <div style={{ flex:1 }}>
+                <p style={{ margin:0, fontSize:14, fontWeight:600, color:T.red }}>Your Chase connection needs attention</p>
+                <p style={{ margin:"4px 0 0", fontSize:13, lineHeight:"19px", color:T.text2 }}>Your number may be unreliable until you reconnect. This is different from a data delay — we need you to re-authorize to continue.</p>
+              </div>
+            </div>
+            <button style={{ height:48, border:"none", borderRadius:999, background:T.red, color:"#FFF", fontWeight:600, fontSize:14, cursor:"pointer", fontFamily:"inherit" }}>
+              Reconnect Chase →
+            </button>
+          </div>
+        )}
+
         {/* Hero */}
-        <div style={{ background:T.bgCard, border:`1px solid ${T.border}`, borderRadius:20, padding:20, display:"grid", gap:16 }}>
+        <div style={{ background:T.bgCard, border:`1px solid ${isReconnect ? T.redBorder : T.border}`, borderRadius:20, padding:20, display:"grid", gap:16 }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:8, flexWrap:"wrap" }}>
             <Badge label={STATUS_COPY[risk]}  color={STATUS_COLOR[risk]}  bg={STATUS_BG[risk]}  />
-            <Badge label={m.confidence}        color={CONF_COLOR[m.confidence]} bg={CONF_BG[m.confidence]} />
+            <Badge label={confidenceBadge}    color={CONF_COLOR[confidenceBadge]} bg={CONF_BG[confidenceBadge]} />
           </div>
           <div>
-            <p style={{ margin:0, fontSize:11, color:T.text3, fontWeight:600, letterSpacing:"0.5px" }}>SAFE TO SPEND</p>
-            <p style={{ margin:"4px 0 0", fontSize:52, lineHeight:"58px", letterSpacing:-2, fontWeight:600, color: risk==="short" ? T.red : T.text1 }}>{fmt(m.safeToSpend)}</p>
-            <p style={{ margin:"6px 0 0", fontSize:12, color:T.text3 }}>As of {m.asOf} · Next paycheck {m.nextPayday}</p>
+            <p style={{ margin:0, fontSize:11, color:T.text3, fontWeight:600, letterSpacing:"0.5px" }}>
+              {profile === "manual" ? "EXPECTED AFTER BILLS" : isReconnect ? "LAST KNOWN VALUE" : "SAFE TO SPEND"}
+            </p>
+            <p style={{ margin:"4px 0 0", fontSize:52, lineHeight:"58px", letterSpacing:-2, fontWeight:600, color: risk==="short" ? T.red : isReconnect ? T.text3 : T.text1, opacity: isReconnect ? 0.6 : 1 }}>
+              {fmt(m.safeToSpend)}
+            </p>
+            <p style={{ margin:"6px 0 0", fontSize:12, color:T.text3 }}>
+              {profile === "manual"
+                ? `Based on your ${m.asOf} update · Next paycheck ${m.nextPayday}`
+                : isReconnect
+                ? `Last synced ${m.asOf} — may not reflect recent activity`
+                : `As of ${m.asOf} · Next paycheck ${m.nextPayday}`}
+            </p>
           </div>
-          <SpendBar model={m} />
-          {m.stale && (
+          {profile === "manual" ? <PaycheckBar model={m} /> : <SpendBar model={m} />}
+
+          {/* Missing transactions banner (D16) */}
+          {isMissingTx && (
+            <div style={{ background:T.bgWarning, border:`1px solid ${T.yellowBorder}`, borderRadius:12, padding:"10px 12px" }}>
+              <p style={{ margin:0, fontSize:13, fontWeight:600, color:T.yellow }}>Some recent spending may not be reflected yet</p>
+              <p style={{ margin:"2px 0 0", fontSize:12, color:T.text2 }}>Balance updated · Transactions last synced: Today, 8:04 AM</p>
+            </div>
+          )}
+
+          {/* Stale data banner */}
+          {m.stale && !isReconnect && (
             <div style={{ background:T.bgWarning, border:`1px solid ${T.yellowBorder}`, borderRadius:12, padding:"10px 12px" }}>
               <p style={{ margin:0, fontSize:13, fontWeight:600, color:T.yellow }}>Some linked data is delayed</p>
               <p style={{ margin:"2px 0 0", fontSize:12, color:T.text2 }}>This number may be lower confidence until your accounts refresh.</p>
             </div>
           )}
+
+          {/* Still learning banner (D12) */}
+          {isStillLearning && (
+            <div style={{ background:T.bgWarning, border:`1px solid ${T.yellowBorder}`, borderRadius:12, padding:"10px 12px" }}>
+              <p style={{ margin:0, fontSize:13, fontWeight:600, color:T.yellow }}>We are still building your pattern</p>
+              <p style={{ margin:"2px 0 0", fontSize:12, color:T.text2 }}>Your number gets more accurate over the next few weeks as we learn your spending habits.</p>
+            </div>
+          )}
+
           <button style={{ height:52, border:"none", borderRadius:999, background: risk==="short" ? T.red : T.text1, color:"#FFF", fontWeight:600, fontSize:15, cursor:"pointer", fontFamily:"inherit" }}>
-            {risk === "short" ? "See coverage options" : "Plan this week"}
+            {profile === "manual"
+              ? "Review my entries"
+              : isReconnect
+              ? "Reconnect to update"
+              : risk === "short" ? "See coverage options" : "Plan this week"}
           </button>
         </div>
 
         {/* Soft BV-link prompt — manual and RoarMoney-only states (D1) */}
         <LinkBankPrompt accountState={accountState} onLinkBank={onLinkBank} />
 
-        {/* Instacash nudge — short state only */}
-        {risk === "short" && (
+        {/* Instacash nudge — short state, linked users only, not when reconnect needed */}
+        {risk === "short" && profile !== "manual" && !isReconnect && (
           <div style={{ background:T.bgNegative, border:`1px solid ${T.redBorder}`, borderRadius:20, padding:20, display:"grid", gap:10 }}>
             <p style={{ margin:0, fontSize:15, fontWeight:600, color:T.red }}>You may come up short before {m.nextPayday}</p>
             <p style={{ margin:0, fontSize:14, lineHeight:"20px", color:T.text2 }}>Instacash can cover the gap up to your limit, with no interest and no late fees.</p>
@@ -674,29 +1054,68 @@ function CashFlowScreen({ accountState, risk, onBack, onLinkBank }: { accountSta
         {/* Why this number */}
         <div style={{ background:T.bgCard, border:`1px solid ${T.border}`, borderRadius:20, padding:20, display:"grid", gap:10 }}>
           <button onClick={()=>setExpanded(!expanded)} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", background:"none", border:"none", cursor:"pointer", padding:0, fontFamily:"inherit" }}>
-            <h2 style={{ margin:0, fontSize:16, fontWeight:600, letterSpacing:"-0.3px" }}>Why this number</h2>
+            <h2 style={{ margin:0, fontSize:16, fontWeight:600, letterSpacing:"-0.3px" }}>How we got this number</h2>
             <span style={{ color:T.text3, fontSize:20, display:"inline-block", transform: expanded ? "rotate(90deg)" : "rotate(0deg)", transition:"transform 200ms ease" }}>›</span>
           </button>
-          {[
-            ["Current balance",          fmt(m.balance),                false],
-            ["Committed obligations",    fmt(-m.committedTotal),        false],
-            ["Estimated variable spend", fmt(-m.estimatedVariable),     true ],
-            ...(m.buffer > 0 ? [["Safety buffer", fmt(-m.buffer), true]] : []),
-          ].map(([l,v,dim],i,arr) => (
-            <div key={l as string}>
-              {i === arr.length-1 && <div style={{ height:1, background:T.border, margin:"4px 0" }} />}
+
+          {profile === "manual" ? (
+            <>
+              {[
+                [`Next paycheck (${m.nextPayday})`, fmt(m.balance),         false],
+                [`Bills due before ${m.nextPayday}`, fmt(-m.committedTotal), false],
+              ].map(([l,v]) => (
+                <div key={l as string} style={{ display:"flex", justifyContent:"space-between", padding:"2px 0" }}>
+                  <span style={{ fontSize:14, color:T.text1 }}>{l as string}</span>
+                  <span style={{ fontSize:14, fontWeight:600, color:T.text1 }}>{v as string}</span>
+                </div>
+              ))}
+              <div style={{ height:1, background:T.border, margin:"4px 0" }} />
               <div style={{ display:"flex", justifyContent:"space-between", padding:"2px 0" }}>
-                <span style={{ fontSize:14, color: dim ? T.text2 : T.text1 }}>{l as string}</span>
-                <span style={{ fontSize:14, fontWeight:600, color: dim ? T.text2 : T.text1 }}>{v as string}</span>
+                <span style={{ fontSize:14, fontWeight:600, color: m.safeToSpend < 0 ? T.red : T.tealDark }}>Expected after bills</span>
+                <span style={{ fontSize:14, fontWeight:600, color: m.safeToSpend < 0 ? T.red : T.tealDark }}>{fmt(m.safeToSpend)}</span>
               </div>
-            </div>
-          ))}
-          {expanded && <p style={{ margin:0, fontSize:12, color:T.text3, lineHeight:"18px" }}>Estimated variable spend is based on your recent transaction patterns. It is not a guarantee.</p>}
+              {expanded && <p style={{ margin:"4px 0 0", fontSize:12, color:T.text3, lineHeight:"18px" }}>Based only on what you entered. This does not account for everyday spending — link your bank for a real-time view.</p>}
+            </>
+          ) : (
+            <>
+              {[
+                ["Current balance (checking)",    fmt(m.balance),                false],
+                ["Committed obligations",          fmt(-m.committedTotal),        false],
+                ["Estimated variable spend",       fmt(-m.estimatedVariable),     true ],
+                ...(m.buffer > 0 ? [["Safety buffer", fmt(-m.buffer), true] as [string,string,boolean]] : []),
+              ].map(([l,v,dim],i,arr) => (
+                <div key={l as string}>
+                  {i === arr.length-1 && <div style={{ height:1, background:T.border, margin:"4px 0" }} />}
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"2px 0" }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                      <span style={{ fontSize:14, color: dim ? T.text2 : T.text1 }}>{l as string}</span>
+                      {i === 0 && isJointAccount && (
+                        <span style={{ fontSize:10, fontWeight:600, color:T.yellow, background:T.bgWarning, borderRadius:999, padding:"2px 7px" }}>
+                          Joint account{jointShare !== null ? ` · ${jointShare}% share` : " · Full balance"}
+                        </span>
+                      )}
+                    </div>
+                    <span style={{ fontSize:14, fontWeight:600, color: dim ? T.text2 : T.text1 }}>{v as string}</span>
+                  </div>
+                </div>
+              ))}
+              {/* Savings informational row — visible in breakdown but not in STS (D15) */}
+              {m.savings !== undefined && m.savings > 0 && (
+                <div style={{ background:T.bgAccent, borderRadius:10, padding:"8px 12px", display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:2 }}>
+                  <span style={{ fontSize:12, color:T.text2 }}>Savings balance <span style={{ color:T.tealDark, fontWeight:600 }}>(not counted in Safe to Spend)</span></span>
+                  <span style={{ fontSize:13, fontWeight:600, color:T.tealDark }}>{fmt(m.savings)}</span>
+                </div>
+              )}
+              {expanded && <p style={{ margin:0, fontSize:12, color:T.text3, lineHeight:"18px" }}>Estimated variable spend is based on your recent transaction patterns. It is not a guarantee.</p>}
+            </>
+          )}
         </div>
 
         {/* Upcoming payments */}
         <div style={{ background:T.bgCard, border:`1px solid ${T.border}`, borderRadius:20, padding:20, display:"grid", gap:10 }}>
-          <h2 style={{ margin:0, fontSize:16, fontWeight:600, letterSpacing:"-0.3px" }}>Upcoming committed payments</h2>
+          <h2 style={{ margin:0, fontSize:16, fontWeight:600, letterSpacing:"-0.3px" }}>
+            {profile === "manual" ? "Bills you entered" : "Upcoming committed payments"}
+          </h2>
           {m.committed.map(item => (
             <div key={item.label} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 12px", borderRadius:12, background:T.bgPage, border:`1px solid ${T.border}` }}>
               <div>
@@ -706,18 +1125,53 @@ function CashFlowScreen({ accountState, risk, onBack, onLinkBank }: { accountSta
               <span style={{ fontSize:14, fontWeight:600, color:T.red }}>{fmt(-item.amount)}</span>
             </div>
           ))}
-          <button style={{ background:"none", border:"none", color:T.tealDark, fontSize:13, fontWeight:600, cursor:"pointer", textAlign:"left", padding:0, fontFamily:"inherit" }}>Something look wrong? Flag it</button>
+
+          {/* Pending transactions (D10) — lighter treatment, distinct from confirmed */}
+          {profile !== "manual" && m.pendingTx && m.pendingTx.length > 0 && (
+            <>
+              <div style={{ display:"flex", alignItems:"center", gap:8, padding:"4px 0 2px" }}>
+                <div style={{ flex:1, height:1, background:T.border }} />
+                <span style={{ fontSize:11, color:T.text3, fontWeight:600, whiteSpace:"nowrap" }}>PENDING</span>
+                <div style={{ flex:1, height:1, background:T.border }} />
+              </div>
+              {m.pendingTx.map(tx => (
+                <div key={tx.label} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 12px", borderRadius:12, background:T.bgPage, border:`1px dashed ${T.border}`, opacity:0.7 }}>
+                  <div>
+                    <p style={{ margin:0, fontSize:14, fontWeight:600, color:T.text2 }}>{tx.label} — Pending</p>
+                    <p style={{ margin:"2px 0 0", fontSize:12, color:T.text3 }}>Authorised {tx.date} · Not yet cleared</p>
+                  </div>
+                  <span style={{ fontSize:14, fontWeight:600, color:T.text2 }}>{fmt(-tx.amount)}</span>
+                </div>
+              ))}
+            </>
+          )}
+
+          <button style={{ background:"none", border:"none", color:T.tealDark, fontSize:13, fontWeight:600, cursor:"pointer", textAlign:"left", padding:0, fontFamily:"inherit" }}>
+            {profile === "manual" ? "Edit my bills ›" : "Something look wrong? Flag it"}
+          </button>
         </div>
 
         {/* Next step */}
         <div style={{ background:T.bgCard, border:`1px solid ${T.border}`, borderRadius:20, padding:20, display:"grid", gap:8 }}>
           <h2 style={{ margin:0, fontSize:16, fontWeight:600, letterSpacing:"-0.3px" }}>Recommended next step</h2>
           <p style={{ margin:0, fontSize:14, lineHeight:"20px", color:T.text2 }}>
-            {risk === "short" ? `You may not make it to payday at your current pace. See options to cover this week and avoid an overdraft.`
-             : risk === "tight" ? `You have less than $100 left. Avoid non-essential spend until your next paycheck on ${m.nextPayday}.`
-             : `You are in good shape this week. Consider moving any surplus to savings before payday.`}
+            {profile === "manual"
+              ? (risk === "short"
+                  ? `Your bills exceed your paycheck before ${m.nextPayday}. Review your bill amounts — or link your bank for a more accurate picture.`
+                  : risk === "tight"
+                  ? `Your expected remainder is under $100. Double-check your bill amounts and paycheck date to make sure this is right.`
+                  : `You look good based on what you entered. Link your bank for a real-time view that updates automatically.`)
+              : (risk === "short"
+                  ? `You may not make it to payday at your current pace. See options to cover this week and avoid an overdraft.`
+                  : risk === "tight"
+                  ? `You have less than $100 left. Avoid non-essential spend until your next paycheck on ${m.nextPayday}.`
+                  : `You are in good shape this week. Consider moving any surplus to savings before payday.`)}
           </p>
-          <p style={{ margin:0, fontSize:12, color:T.text3 }}>Why this now: based on your next 7 days of bills and your latest account activity.</p>
+          <p style={{ margin:0, fontSize:12, color:T.text3 }}>
+            {profile === "manual"
+              ? "Based on the paycheck amount and bills you entered."
+              : "Based on your next 7 days of bills and your latest account activity."}
+          </p>
         </div>
 
       </div>
@@ -733,6 +1187,8 @@ const SCREEN_LABELS: Record<Screen, string> = {
   "splash":           "Feature intro",
   "link-bank":        "Link bank",
   "link-connecting":  "Connecting",
+  "joint-account":    "Joint account",
+  "bill-review":      "Bill review",
   "manual-paycheck":  "Manual: paycheck",
   "manual-bills":     "Manual: bills",
   "cashflow":         "Cash Flow",
@@ -742,7 +1198,12 @@ export default function App() {
   const [screen,  setScreen]  = useState<Screen>("accounts");
   const [accountState, setAccountState] = useState<AccountState>("new-user");
   const [risk,    setRisk]    = useState<RiskLevel>("tight");
+  const [linkedOverlay, setLinkedOverlay] = useState<LinkedOverlay>("none");
   const [bank,    setBank]    = useState<string | null>(null);
+  const [isJointAccount, setIsJointAccount] = useState(false);
+  const [jointShare,     setJointShare]     = useState<number | null>(null);
+  const [simulateJoint,  setSimulateJoint]  = useState(false);
+  const [simulateLowHistory, setSimulateLowHistory] = useState(false);
 
   const go = (s: Screen) => setScreen(s);
 
@@ -753,7 +1214,17 @@ export default function App() {
 
   const handleBankSelect = (b: string) => { setBank(b); go("link-connecting"); };
 
-  const handleConnected = () => { setAccountState("bv-linked"); go("cashflow"); };
+  const handleConnected = () => {
+    setAccountState("bv-linked");
+    if (simulateJoint) go("joint-account");
+    else go("bill-review");
+  };
+
+  const handleJointConfirm = (share: number | null) => {
+    setIsJointAccount(true);
+    setJointShare(share);
+    go("bill-review");
+  };
 
   const handleManualDone = () => { setAccountState("manual-only"); go("cashflow"); };
 
@@ -804,7 +1275,32 @@ export default function App() {
             </div>
           </div>
 
-          <button onClick={()=>{ go("accounts"); setAccountState("new-user"); setRisk("tight"); }} style={{ height:40, border:`1px solid ${T.border}`, borderRadius:999, background:"transparent", fontSize:13, fontWeight:600, color:T.text2, cursor:"pointer", fontFamily:"inherit" }}>↺ Reset flow</button>
+          <div>
+            <p style={{ margin:"0 0 8px", fontSize:10, fontWeight:600, color:T.text3, textTransform:"uppercase", letterSpacing:"0.6px" }}>Linked state overlay</p>
+            <p style={{ margin:"0 0 8px", fontSize:10, color:T.text3, lineHeight:"14px" }}>Active on linked / RoarMoney profiles only</p>
+            <div style={{ display:"grid", gap:6 }}>
+              <Chip label="None"                 selected={linkedOverlay==="none"}         onClick={()=>setLinkedOverlay("none")} />
+              <Chip label="Still learning"       selected={linkedOverlay==="still-learning"} onClick={()=>setLinkedOverlay("still-learning")} />
+              <Chip label="Reconnect needed"     selected={linkedOverlay==="reconnect"}    onClick={()=>setLinkedOverlay("reconnect")} />
+              <Chip label="Missing transactions" selected={linkedOverlay==="missing-tx"}   onClick={()=>setLinkedOverlay("missing-tx")} />
+            </div>
+          </div>
+
+          <div>
+            <p style={{ margin:"0 0 8px", fontSize:10, fontWeight:600, color:T.text3, textTransform:"uppercase", letterSpacing:"0.6px" }}>Onboarding flags</p>
+            <div style={{ display:"grid", gap:6 }}>
+              {([
+                ["Simulate joint account",  simulateJoint,       setSimulateJoint],
+                ["Simulate low history",    simulateLowHistory,  setSimulateLowHistory],
+              ] as [string, boolean, (v:boolean)=>void][]).map(([label, active, setter]) => (
+                <button key={label} onClick={() => setter(!active)}
+                  style={{ height:44, padding:"0 16px", borderRadius:999, cursor:"pointer", border:`1.5px solid ${active ? T.yellow : T.border}`, background: active ? T.bgWarning : T.bgCard, color: active ? T.yellow : T.text2, fontSize:13, fontWeight:600, fontFamily:"inherit", transition:"all 120ms ease", textAlign:"left" }}
+                >{active ? "✓ " : ""}{label}</button>
+              ))}
+            </div>
+          </div>
+
+          <button onClick={()=>{ go("accounts"); setAccountState("new-user"); setRisk("tight"); setLinkedOverlay("none"); setIsJointAccount(false); setJointShare(null); setSimulateJoint(false); setSimulateLowHistory(false); }} style={{ height:40, border:`1px solid ${T.border}`, borderRadius:999, background:"transparent", fontSize:13, fontWeight:600, color:T.text2, cursor:"pointer", fontFamily:"inherit" }}>↺ Reset flow</button>
 
           <p style={{ margin:0, fontSize:10, color:T.text3, lineHeight:"15px" }}>Font: DM Sans<br/>Production: Baton Turbo<br/>Tokens: MLDS 4.0</p>
         </div>
@@ -825,9 +1321,11 @@ export default function App() {
             {screen === "splash"          && <SplashScreen      onClose={()=>go("accounts")} onLinkBank={()=>go("link-bank")} onManual={()=>go("manual-paycheck")} />}
             {screen === "link-bank"       && <LinkBankScreen    onBack={()=>go("splash")}    onSelect={handleBankSelect} />}
             {screen === "link-connecting" && <LinkConnectingScreen bank={bank ?? "Chase"} onConnected={handleConnected} />}
+            {screen === "joint-account"   && <JointAccountScreen bank={bank ?? "Chase"} onConfirm={handleJointConfirm} />}
+            {screen === "bill-review"     && <BillReviewScreen simulateLowHistory={simulateLowHistory} onBack={()=>go("link-connecting")} onComplete={()=>go("cashflow")} />}
             {screen === "manual-paycheck" && <ManualPaycheckScreen onBack={()=>go("splash")} onContinue={()=>go("manual-bills")} />}
             {screen === "manual-bills"    && <ManualBillsScreen  onBack={()=>go("manual-paycheck")} onDone={handleManualDone} />}
-            {screen === "cashflow"        && <CashFlowScreen     accountState={accountState} risk={risk} onBack={()=>go("accounts")} onLinkBank={()=>go("link-bank")} />}
+            {screen === "cashflow"        && <CashFlowScreen     accountState={accountState} risk={risk} linkedOverlay={linkedOverlay} isJointAccount={isJointAccount} jointShare={jointShare} onBack={()=>go("accounts")} onLinkBank={()=>go("link-bank")} />}
           </div>
 
           {/* Home indicator */}
