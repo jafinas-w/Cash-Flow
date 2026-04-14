@@ -1,0 +1,332 @@
+---
+description: Design system token reference, component inventory, and prototype presentation standards. Source of truth for all visual values used in this project.
+alwaysApply: true
+---
+
+# Design System Reference
+
+> **What this file is:** The single source of truth for all visual tokens, component specs, spacing, typography, and interaction patterns. Every prototype, audit, and design recommendation must reference this file for exact values — never approximate.
+>
+> **Design system:** [DESIGN SYSTEM NAME] v[VERSION]
+> **Figma source:** [FIGMA LINK]
+> **Last updated:** [DATE]
+>
+> **Depends on:** `01-project-context.mdc`, `02-ai-role-ux-standards.mdc`
+> **Used by:** `06-react-prototype-standards.mdc`
+
+---
+
+## React Prototype Token Map
+
+Use these CSS custom properties in every prototype. Never approximate colors, spacing, or type sizes.
+
+> **Font note:** [PRIMARY FONT NAME] may not be available via CDN. Use `'[FALLBACK FONT]', -apple-system, system-ui, sans-serif` as the web-safe substitute. Note this substitution in prototype output so stakeholders know the final product uses [PRIMARY FONT NAME].
+
+### Light Mode (default)
+
+```css
+:root {
+  /* Font */
+  --font-family: '[FALLBACK FONT]', -apple-system, system-ui, sans-serif;
+  --font-weight-regular: 400;
+  --font-weight-medium: [500 or 600];
+
+  /* Background */
+  --bg-primary: [HEX];     /* Screen background */
+  --bg-secondary: [HEX];   /* Card background */
+  --bg-tertiary: [HEX];    /* Nested surfaces */
+  --bg-alt: [HEX];         /* Inverted surfaces */
+
+  /* Text */
+  --text-primary: [HEX];
+  --text-secondary: [rgba with opacity];
+  --text-tertiary: [rgba with opacity];
+  --text-disabled: [rgba with opacity];
+
+  /* Semantic */
+  --color-accent: [HEX];
+  --color-positive: [HEX];
+  --color-warning: [HEX];
+  --color-negative: [HEX];
+
+  /* Accent backgrounds */
+  --bg-accent: [HEX];
+  --bg-positive: [HEX];
+  --bg-warning: [HEX];
+  --bg-negative: [HEX];
+
+  /* Brand primaries */
+  --brand-primary: [HEX];
+  --brand-secondary: [HEX];
+  --brand-tertiary: [HEX];
+
+  /* Borders */
+  --border-primary: [rgba];
+  --border-accent: [HEX];
+  --border-negative: [HEX];
+  --border-warning: [HEX];
+
+  /* Elevation */
+  --shadow-sm: [value];
+  --shadow-md: [value];
+  --shadow-lg: [value];
+
+  /* Radii */
+  --radius-xs: [px];
+  --radius-sm: [px];
+  --radius-md: [px];
+  --radius-lg: [px];
+  --radius-full: 999px;
+
+  /* Spacing (8pt grid) */
+  --space-4: 4px;
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-20: 20px;
+  --space-24: 24px;
+  --space-32: 32px;
+  --space-40: 40px;
+  --space-48: 48px;
+
+  /* Overlay */
+  --overlay: rgba(0,0,0,0.60);
+}
+```
+
+### Dark Mode
+
+```css
+[data-theme="dark"] {
+  --bg-primary: [HEX];
+  --bg-secondary: [HEX];
+  --bg-tertiary: [HEX];
+  --bg-alt: [HEX];
+
+  --text-primary: [HEX];
+  --text-secondary: [rgba];
+  --text-tertiary: [rgba];
+  --text-disabled: [rgba];
+
+  --color-accent: [HEX];
+  --color-warning: [HEX];
+  --color-negative: [HEX];
+
+  --bg-accent: [HEX];
+  --bg-warning: [HEX];
+  --bg-negative: [HEX];
+
+  --border-primary: [rgba];
+  --border-accent: [HEX];
+  --border-negative: [HEX];
+}
+```
+
+---
+
+## Mobile Phone Frame (Prototype Presentation)
+
+All prototypes presenting as mobile screens must use this wrapper:
+
+```
+Frame width: [390px for iPhone 15 / 360px for Android]
+Content padding: 16px horizontal
+Status bar height: [54px]
+Bottom nav height: [84px] + [34px] home indicator = [118px]
+Safe content area: [390 x ~726px] between status bar and bottom nav
+```
+
+---
+
+## Typography
+
+**Font family:** [PRIMARY FONT NAME]
+**Letter spacing:** [General tracking direction — e.g., "Negative tracking across all styles"]
+
+### Type Scale
+
+| Style | Size | Line Height | Weight |
+|---|---|---|---|
+| Display Lg | [px] | [px] | [weight] |
+| Display Md | [px] | [px] | [weight] |
+| Headline Lg | [px] | [px] | [weight] |
+| Headline Md | [px] | [px] | [weight] |
+| Headline Sm | [px] | [px] | [weight] |
+| Title Lg | [px] | [px] | [weight] |
+| Title Md | [px] | [px] | [weight] |
+| Title Sm | [px] | [px] | [weight] |
+| Body Lg | [px] | [px] | [weight] |
+| Body Md | [px] | [px] | [weight] |
+| Body Sm | [px] | [px] | [weight] |
+| Label Lg | [px] | [px] | [weight] |
+| Label Md | [px] | [px] | [weight] |
+| Label Sm | [px] | [px] | [weight] |
+
+### Common UI Element Mapping
+
+| UI Element | Style | Approx. CSS |
+|---|---|---|
+| Screen title | [Headline Md] | [size/line-height/weight] |
+| Section header | [Title Lg] | [size/line-height/weight] |
+| Card title | [Title Sm] | [size/line-height/weight] |
+| Body text | [Body Lg] | [size/line-height/weight] |
+| Secondary text | [Body Md] | [size/line-height/weight] |
+| Caption | [Body Sm] | [size/line-height/weight] |
+| Button label | [Label Lg] | [size/line-height/weight] |
+| Chip / tag | [Label Md] | [size/line-height/weight] |
+
+---
+
+## Primitive Color Palette
+
+### Neutrals
+
+| Token | Hex |
+|---|---|
+| Neutral-0 (white) | `#FFFFFF` |
+| Neutral-100 | `[HEX]` |
+| Neutral-200 | `[HEX]` |
+| Neutral-400 | `[HEX]` |
+| Neutral-700 | `[HEX]` |
+| Neutral-900 | `[HEX]` |
+| Neutral-1000 (black) | `#000000` |
+
+### Brand Primary
+
+| Token | Hex | Note |
+|---|---|---|
+| [Brand]-100 | `[HEX]` | Light background |
+| [Brand]-300 | `[HEX]` | Border |
+| [Brand]-600 | `[HEX]` | Primary brand anchor |
+| [Brand]-900 | `[HEX]` | Dark text on light |
+
+### Semantic: Positive / Warning / Negative
+
+| Token | Hex | Note |
+|---|---|---|
+| Positive-light | `[HEX]` | Background |
+| Positive-border | `[HEX]` | Border |
+| Positive-text | `[HEX]` | Text/icon |
+| Warning-light | `[HEX]` | Background |
+| Warning-border | `[HEX]` | Border |
+| Warning-text | `[HEX]` | Text/icon |
+| Negative-light | `[HEX]` | Background |
+| Negative-border | `[HEX]` | Border |
+| Negative-text | `[HEX]` | Text/icon |
+
+---
+
+## Spacing & Layout
+
+| Context | Value |
+|---|---|
+| Grid base | 8px |
+| Screen horizontal padding | [16px] |
+| Card internal padding | [24px] |
+| Section spacing | [32px] |
+| Touch target min (iOS) | 44x44px |
+| Touch target min (Android) | 48x48dp |
+| Min gap between targets | 8px |
+| Label-to-input gap | 4–6px |
+| Between form fields | 16–24px |
+
+---
+
+## Component Inventory
+
+For each component, record: Figma name, variants, key dimensions, states, and any usage rules.
+
+---
+
+### [COMPONENT 1 NAME]
+
+**Figma name:** `[exact Figma layer name]`
+**Variants:** [List key variants]
+**Dimensions:** [Width x height, or fill behavior]
+**States:** Default, Hover, Pressed/Active, Focused, Disabled, Loading
+**Rules:** [Any "do not use" variants, usage restrictions, or pairing rules]
+
+---
+
+### [COMPONENT 2 NAME]
+
+**Figma name:** `[exact Figma layer name]`
+**Variants:** [List]
+**Dimensions:** [Dimensions]
+**States:** [States]
+**Rules:** [Rules]
+
+---
+
+### Button
+
+**Figma name:** `[Button component name]`
+**Types:** Primary, Secondary, Negative, Outline, Disabled, Transparent
+**Sizes:**
+
+| Size | Full-width | Icon only |
+|---|---|---|
+| Large | [Wpx x 48px] | [48x48px] |
+| Medium | [auto x 36px] | [36x36px] |
+| Small | [auto x 30px] | [30x30px] |
+
+**Rules:**
+- One primary CTA per section
+- Labels name the outcome, not the action
+- Destructive actions use Negative variant with explicit confirmation
+- `[Side by side button layout name]`: [permitted / DO NOT USE — note if explicitly flagged in Figma]
+
+---
+
+### Input / Form Fields
+
+**Figma name:** `[Input component name]`
+**States:** Inactive, Active, Filled, Error, Error-Filled, Disabled, Disabled-filled
+**Layout:** [343px x 80px with label] / [343px x 56px compact]
+**Rules:**
+- Label above input, top-aligned
+- Placeholder is format hint only, never the label
+- Real-time validation, not post-submission error walls
+
+---
+
+### Dialog / Modal
+
+**Figma name:** `[Dialog component name]`
+**Button layouts:** Single, Stacked, [Note if any layout is explicitly forbidden]
+**Layout:** [327px wide], height varies
+
+---
+
+## Animation
+
+| Type | Duration | Notes |
+|---|---|---|
+| Micro-interactions | 100–150ms | Button press, toggle, checkbox |
+| Panels and expands | 200–300ms | Accordions, drawers, sheets |
+| Closing | Faster than opening | Always |
+| Easing | Never linear | Except progress bars |
+| Reduced motion | Respect `prefers-reduced-motion` | Required |
+
+---
+
+## Accessibility
+
+| Standard | Requirement |
+|---|---|
+| Text contrast | 4.5:1 minimum (WCAG AA) |
+| Body text min size | 16px |
+| Color-only meaning | Never. Pair with icon, text, or pattern |
+| Touch targets | 44x44px (iOS) / 48x48dp (Android) |
+| Loading states | Skeleton screens, not spinners |
+| Focus indicators | Visible on all interactive elements |
+| Screen readers | All interactive elements need accessible labels |
+
+---
+
+## Gaps — Requires Figma Verification
+
+Track any token or component values not yet extracted:
+
+- [ ] [Token or component name] — [What's missing and why it matters]
+- [ ] [Token or component name] — [What's missing]

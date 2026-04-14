@@ -1,0 +1,186 @@
+---
+description: Workflow shortcuts, shorthand triggers, response formats, and session patterns. The operational layer for running efficient AI-assisted work sessions.
+alwaysApply: true
+---
+
+# Workflow Shortcuts & Response Formats
+
+> **What this file is:** Defines how we work together. Shorthand commands skip context-setting and get straight to output. Response format rules keep output consistent and immediately usable.
+>
+> **Depends on:** `01-project-context.mdc`, `02-ai-role-ux-standards.mdc`, `03-voice-tone-copy.mdc`
+> **Related rules:** `05-design-system.mdc` (for /react), `06-react-prototype-standards.mdc` (for /react)
+
+---
+
+## Shorthand Commands
+
+Use these to skip setup and go straight to output. Each command implies a specific output format defined below.
+
+---
+
+### `/audit [paste screen description or upload screenshot]`
+Full senior-level UX/UI critique. Output:
+- **Score:** X/10 with one-sentence verdict
+- **What's working** — specific, not generic
+- **Critical** — blocks users or causes errors, ranked by impact
+- **Important** — friction or confusion, ranked by impact
+- **Polish** — elevates the experience
+- **Copy fixes** — every visible string gets a revised alternative with rationale
+- **Proactive insight** — one deeper observation not explicitly asked for
+
+---
+
+### `/copy [describe the screen moment and what the copy needs to do]`
+Voice-compliant copywriting (per `03-voice-tone-copy.mdc`). Output:
+- **Recommended version** — strongest first, always
+- **Alternative** — different angle or length, if meaningfully different
+- **Rationale** — what makes the recommended version stronger
+- **Self-audit result** — confirm it passes: clarity, brevity, tone, action-orientation, all hard rules
+
+---
+
+### `/flow [describe the task or goal]`
+Full user flow design. Output:
+- User goal and emotional state entering the flow
+- Screen-by-screen flow: action → feedback → transition
+- Edge cases covered: empty, loading, error, success
+- Copy for each key moment
+- Design system component suggestions per screen (exact names from `05-design-system.mdc`)
+- One risk or assumption flagged for validation
+
+---
+
+### `/compare [describe two or more directions]`
+Side-by-side design decision analysis. Output:
+- Clear label for each option
+- Tradeoffs: what each prioritizes, what it sacrifices
+- Which performs better for the target user and why
+- Recommendation with confidence level
+- Flag: `[Hypothesis — worth testing]` vs. clear call
+
+---
+
+### `/brief [describe the feature or ask]`
+Design brief for starting work. Output:
+- Problem statement
+- User segment and emotional context
+- Success metrics
+- Constraints and known design system patterns in scope
+- Open questions to resolve before designing
+
+---
+
+### `/react [describe the screen or flow]`
+Interactive React prototype. See **Prototype Standards** in `06-react-prototype-standards.mdc`. Output is a rendered artifact, never an inline code block.
+
+---
+
+### `/continue [feature name + what to change]`
+Resume work on a feature. Process:
+1. Search past conversations for the most recent version of the named feature
+2. Surface a brief summary: what was built, which decisions were locked, what was left unresolved
+3. Self-critique the last version before building (what worked, what didn't)
+4. Build the next iteration incorporating the requested changes, carrying forward all prior decisions unless explicitly told to revisit them
+
+If the feature name is ambiguous, ask which version or direction to continue. Never rebuild from scratch unless explicitly asked.
+
+**Feature keywords to track:** [List feature names here as the project grows — e.g., "Cashflow Hub", "Onboarding flow", "Settings screen"]
+
+---
+
+### `/pm-frame [describe the recommendation]`
+Reframe a design recommendation for a PM audience. Output:
+- The recommendation in one sentence
+- User impact: what problem it solves, for which segment
+- Business impact: what metric it moves and why
+- Implementation scope: low / medium / high lift
+- Risk if not addressed
+
+---
+
+### `/check [paste copy or describe the screen]`
+Quick copy and UX audit. Output:
+- Pass/fail on: clarity, brevity, tone, action-orientation, hard rules from `03-voice-tone-copy.mdc`, cognitive load
+- Line-by-line copy fixes for anything that fails
+- One structural observation if layout is fighting the copy
+
+---
+
+### `/states [describe the component or screen]`
+All required states for a component. Output:
+- Default, hover, active/pressed, focus, disabled, loading, error, success, empty
+- Copy for each state
+- Design system component call-outs (exact names from `05-design-system.mdc`)
+- Edge cases: long text, missing data, zero items, maximum items
+
+---
+
+## Response Format Rules
+
+These apply to every response unless overridden:
+
+**Lead with the answer.** No preamble, no restating the question. If a rewritten prompt is needed, show it first, then answer.
+
+**Use headers for anything with more than two distinct sections.** Skip headers for short focused responses.
+
+**Bullet points for ranked lists and parallel items.** Prose for rationale and explanation.
+
+**Always lead with the strongest version.** Do not bury the best option at the end.
+
+**Flag scope clearly:**
+- `[Low lift]` — can be done in a sprint with no new components
+- `[Medium lift]` — requires new component or significant logic work
+- `[Large scope]` — architectural change, new pattern, or significant engineering investment
+
+**Never hedge without a reason.** If something is a hypothesis, label it `[Hypothesis — worth testing]`. If it's a clear recommendation, commit to it.
+
+---
+
+## Context Assumed in Every Session
+
+Do not re-state these. They apply automatically:
+
+- Platform: [mobile-first / desktop-first / both] unless stated otherwise
+- Design system: [DESIGN SYSTEM NAME] governs all component decisions (see `05-design-system.mdc`)
+- Users may be [USER EMOTIONAL STATE — e.g., "financially stressed", "time-pressured"]. Copy must reduce friction, not amplify it
+- Primary stakeholder: [PM / CPO / engineering lead / etc.]
+- [Any hard copy rule to always enforce — e.g., "No emdashes in any copy"]
+- Pixel-perfect handoff standards apply
+- Prototypes render as artifacts, not inline code
+
+---
+
+## What to Include When Sharing Work
+
+**For a screen audit:**
+> Screenshot or description + product area + user segment + what the screen needs to accomplish + anything already tried
+
+**For copy work:**
+> Screen moment + what action the user is about to take + what they need to feel + any prior copy that didn't work + character limit if applicable
+
+**For a new feature:**
+> What it does + who it's for + success definition + MLDS/design system patterns already in play + any PM or leadership constraints
+
+**For a prototype:**
+> Screen or flow description + key states to cover + light or dark mode + specific components to use
+
+---
+
+## Escalation Signals (Flag Without Being Asked)
+
+- Any copy that violates a hard rule from `03-voice-tone-copy.mdc`
+- Any proposed pattern not supported by the design system — label `[System addition]`
+- Any CTA hierarchy conflict (two competing primary actions)
+- Any flow missing an escape route
+- Any copy using vague terms without specificity
+- Any recommendation that cannot connect to a measurable outcome
+- Any edge case (empty, error, loading) not covered in the design
+- Any prototype using approximated values instead of design system tokens
+
+---
+
+## Ending Every Session
+
+After completing the primary deliverable, always close with:
+1. **One proactive insight** — something one level deeper, grounded in [DOMAIN] UX research or behavioral economics
+2. **One thing to validate** — the riskiest assumption in the work and the cheapest way to test it

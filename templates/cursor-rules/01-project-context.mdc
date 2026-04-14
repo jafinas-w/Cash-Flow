@@ -1,0 +1,185 @@
+---
+description: Project context — what this company does, who it serves, and why it exists. Ground truth for all product, design, and engineering work.
+alwaysApply: true
+---
+
+# Project Context: [COMPANY NAME]
+
+> **Purpose:** Foundational context for all AI-assisted work in this project. Reference this alongside role and workflow rules. Keep it updated when strategy, product surface, or user segments change materially.
+>
+> **Related rules:**
+> - `02-ai-role-ux-standards.mdc` — Role definition, design principles, feedback frameworks
+> - `03-voice-tone-copy.mdc` — Writing voice, tone, and copy standards
+> - `04-workflow-shortcuts.mdc` — Shorthand commands and session patterns
+
+---
+
+## Vision & Mission
+
+**Vision:** [One sentence — what does the world look like when this company succeeds?]
+
+**Mission:** [One sentence — what does this company do every day to get there?]
+
+**Core problem being solved:** [What painful, specific problem does this company own? Why are existing solutions inadequate?]
+
+---
+
+## What We Do
+
+[2–3 sentence description of the product and its primary value proposition. Focus on outcomes for users, not features.]
+
+**Product pillars / jobs-to-be-done:**
+
+| Pillar | What It Does |
+|---|---|
+| **[Pillar 1]** | [User outcome in plain language] |
+| **[Pillar 2]** | [User outcome in plain language] |
+| **[Pillar 3]** | [User outcome in plain language] |
+| **[Pillar 4]** | [User outcome in plain language] |
+
+This framework should be referenced when designing any feature — ask which pillar(s) a feature serves, and whether it connects to the others.
+
+---
+
+## Product Surface
+
+### Core Products / Features
+
+- **[Product 1]** — [What it does. One sentence on current repositioning or strategic emphasis if relevant.]
+- **[Product 2]** — [What it does.]
+- **[Product 3]** — [What it does.]
+- **[Product 4]** — [What it does.]
+
+### Engagement / Supporting Features
+
+- **[Feature 1]** — [Brief description]
+- **[Feature 2]** — [Brief description]
+
+### [Monetization Surface / Marketplace / etc.]
+
+- **[Surface name]** — [How it works and its strategic role (revenue, personalization, retention, etc.)]
+
+### Membership / Subscription (if applicable)
+
+- **Pricing:** [Tier structure and price points]
+- **Value stack:** [What members get]
+- **Design principle:** [How membership should feel — ROI engine, not a paywall, etc.]
+
+---
+
+## Business Model
+
+| Revenue Stream | Description |
+|---|---|
+| **[Stream 1]** | [How money is made] |
+| **[Stream 2]** | [How money is made] |
+| **[Stream 3]** | [How money is made] |
+
+**Strategic shift underway:** [What is the company moving from/to in how it monetizes? How should design support this?]
+
+---
+
+## Target User
+
+### Who They Are
+
+[2–3 sentences: income level, life situation, what they're trying to accomplish. Not demographic clichés — behavioral reality.]
+
+**Key pain points (cite research if available):**
+- [Top concern — e.g., "X% cite Y as their primary stress"]
+- [Second concern]
+- [Third concern]
+
+**The user journey / emotional cycle:**
+1. **[Moment 1] → [Emotion]** — "[Quote that captures the feeling]"
+2. **[Moment 2] → [Emotion]** — "[Quote]"
+3. **[Moment 3] → [Emotion]** — "[Quote]"
+
+### User Segments
+
+| Segment | Description | Strategic Priority |
+|---|---|---|
+| **[Segment A]** | [Behavioral description, not demographic] | Primary |
+| **[Segment B]** | [Behavioral description] | Secondary |
+| **[Segment C]** | [Behavioral description] | Tertiary / feeder |
+
+### Jobs-to-Be-Done
+
+| User State | Primary Need | Desired Feeling |
+|---|---|---|
+| [Low-engagement / early state] | [What they need] | "[Target emotion]" |
+| [Mid-engagement / active state] | [What they need] | "[Target emotion]" |
+| [High-engagement / power state] | [What they need] | "[Target emotion]" |
+
+---
+
+## Strategic Context
+
+### Where We Are Today
+
+[2–3 sentences: what's working, what's fragmented, what the biggest opportunity is. Be honest about the gap between current state and vision.]
+
+### How We Win (Strategic Pillars)
+
+1. **[Pillar 1 name]** — [What this means in practice]
+2. **[Pillar 2 name]** — [What this means in practice]
+3. **[Pillar 3 name]** — [What this means in practice]
+4. **[Pillar 4 name]** — [What this means in practice]
+5. **[Pillar 5 name]** — [What this means in practice]
+
+### Near-Term Roadmap
+
+**Key launches / priorities for [CURRENT YEAR]:**
+- **[Initiative 1]** — [Brief description and launch stage: MVP / beta / scaling]
+- **[Initiative 2]** — [Brief description]
+- **[Initiative 3]** — [Brief description]
+
+---
+
+## Product Constraints
+
+### Regulatory & Compliance
+
+- [Industry-specific regulatory bodies: e.g., CFPB, FINRA, HIPAA, FTC, etc.]
+- [Hard language constraints: e.g., "never frame EWA as a loan"]
+- [Mandatory compliance review triggers: e.g., any feature touching money movement or health data]
+- **Default assumption:** [Does every feature in this domain require compliance review before launch?]
+
+### Design System
+
+- [Design system name and version]
+- [Core principle: extend existing patterns, do not introduce novel components without flagging]
+- [Visual language summary: clean/bold/playful, mobile-first/desktop-first, light/dark default]
+
+### Personalization & Data
+
+- [Is there a personalization engine? What signals drive it?]
+- [New user vs. returning user experience considerations]
+- [Key segmentation signal: e.g., cash flow ratio, usage frequency, account depth]
+
+### Partner & Third-Party Dependencies
+
+- [Any features powered by external providers that constrain design/data availability]
+
+---
+
+## Key Product Principles
+
+1. **[Principle 1 name]** — [What it means and how it should show up in design decisions]
+2. **[Principle 2 name]** — [What it means]
+3. **[Principle 3 name]** — [What it means]
+4. **[Principle 4 name]** — [What it means]
+5. **[Principle 5 name]** — [What it means]
+
+---
+
+## What This Document Is Not
+
+- Specific feature requirements or acceptance criteria
+- Current metrics or OKRs
+- Technical architecture documentation
+- Design system component specs (see `05-design-system.mdc`)
+
+---
+
+*Last updated: [DATE] — Update when company strategy, product surface, or user segments change materially.*

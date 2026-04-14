@@ -1,0 +1,326 @@
+---
+description: React and TypeScript prototype standards for this project. File-scoped to component and source files. Governs code structure, styling, data patterns, and handoff quality.
+globs: **/*.tsx, **/*.jsx, **/*.ts
+alwaysApply: false
+---
+
+# React & TypeScript Prototype Standards
+
+> **What this file is:** Code standards for all React prototypes and source files in this project. Governs component structure, inline styling rules, state management, data realism, and handoff quality.
+>
+> **Depends on:** `05-design-system.mdc` — all token values come from there. Never approximate.
+> **Triggered by:** Any `.tsx`, `.jsx`, or `.ts` file in the project.
+
+---
+
+## Core Rules
+
+- **Inline styles only.** No external CSS files, no Tailwind, no styled-components, no CSS modules. Every style value must be traceable to a token in `05-design-system.mdc`.
+- **No external dependencies** beyond: React, [recharts or chart library], [lucide-react or icon library]. Do not introduce new packages without calling it out.
+- **All states included.** Every component must handle: loading (skeleton), error, empty, and success. Never just the happy path.
+- **Realistic mock data.** Data must reflect the actual user context from `01-project-context.mdc` — real amounts, real names, real dates. No "Lorem ipsum", no "User Name", no "$0.00" defaults.
+
+---
+
+## Component Structure
+
+### File Organization
+
+```
+src/
+  components/
+    [FeatureName]/
+      [FeatureName].tsx       # Main component
+      [FeatureName].types.ts  # TypeScript interfaces
+      index.ts                # Re-export
+  data/
+    mockData.ts               # All mock data in one place
+  tokens/
+    tokens.ts                 # Design system CSS variables as JS constants
+  App.tsx
+```
+
+### Component Template
+
+```tsx
+// ✅ Standard component structure
+interface [ComponentName]Props {
+  // Explicit types — no `any`
+}
+
+const [ComponentName] = ({ prop1, prop2 }: [ComponentName]Props) => {
+  const [state, setState] = useState<[Type]>([defaultValue]);
+
+  // Handlers co-located with the state they manage
+  const handle[Action] = () => { ... };
+
+  // Derived values calculated inline, not in render
+  const derivedValue = useMemo(() => ..., [dep]);
+
+  return (
+    <div style={styles.container}>
+      {/* JSX */}
+    </div>
+  );
+};
+
+// Styles at bottom of file, grouped by component section
+const styles = {
+  container: {
+    backgroundColor: 'var(--bg-secondary)',
+    borderRadius: 'var(--radius-md)',
+    padding: 'var(--space-24)',
+  } as React.CSSProperties,
+};
+```
+
+---
+
+## Styling Rules
+
+### Always Use CSS Custom Properties
+
+```tsx
+// ✅ CORRECT — traceable to design system tokens
+style={{ color: 'var(--text-primary)', padding: 'var(--space-16)' }}
+
+// ❌ WRONG — approximated, untrackable
+style={{ color: '#000', padding: '16px' }}
+```
+
+### Token Reference Pattern
+
+If you need a JS constant (e.g., for computed values), define tokens in `src/tokens/tokens.ts`:
+
+```ts
+// tokens.ts
+export const tokens = {
+  bgPrimary: 'var(--bg-primary)',
+  textPrimary: 'var(--text-primary)',
+  spaceMd: 'var(--space-16)',
+  radiusMd: 'var(--radius-md)',
+  // ... add as needed
+} as const;
+```
+
+### Typography
+
+```tsx
+// ✅ Screen title — Headline Md
+style={{ fontSize: '[SIZE]px', lineHeight: '[LINE-HEIGHT]px', fontWeight: [WEIGHT], letterSpacing: '[TRACKING]' }}
+
+// ✅ Body text — Body Lg
+style={{ fontSize: '[SIZE]px', lineHeight: '[LINE-HEIGHT]px', fontWeight: 400 }}
+
+// ✅ Button label — Label Lg
+style={{ fontSize: '[SIZE]px', lineHeight: '[LINE-HEIGHT]px', fontWeight: [WEIGHT] }}
+```
+
+### Touch Targets
+
+All interactive elements must meet minimum touch target size. Use padding to expand small elements:
+
+```tsx
+// ✅ Minimum 44x44px touch target
+style={{ minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+```
+
+---
+
+## State Management
+
+### Keep It Local
+
+For prototypes, prefer `useState` and `useReducer`. Avoid global state libraries (Redux, Zustand) unless the prototype specifically demonstrates cross-screen state behavior.
+
+```tsx
+// ✅ Local state with typed enum
+type ViewState = 'loading' | 'error' | 'empty' | 'populated';
+const [viewState, setViewState] = useState<ViewState>('loading');
+```
+
+### Loading States — Skeleton, Not Spinner
+
+```tsx
+// ✅ Skeleton screen pattern
+const SkeletonLine = ({ width = '100%', height = 16 }: { width?: string | number, height?: number }) => (
+  <div style={{
+    width,
+    height,
+    borderRadius: 'var(--radius-xs)',
+    backgroundColor: 'var(--bg-tertiary)',
+    // Pulse animation — respect prefers-reduced-motion
+    animation: 'pulse 1.5s ease-in-out infinite',
+  }} />
+);
+```
+
+### Error States
+
+Error components must answer: what happened, why, what to do next.
+
+```tsx
+// ✅ Error state pattern
+<div style={{ ... }}>
+  <p style={{ color: 'var(--color-negative)', fontWeight: [WEIGHT] }}>
+    {errorMessage} {/* Specific, not "Something went wrong" */}
+  </p>
+  <button onClick={onRetry}>Try again</button>
+</div>
+```
+
+---
+
+## Mock Data
+
+### Principles
+
+- Amounts must be realistic for the user segment defined in `01-project-context.mdc`
+- Dates must be relative to today (use `new Date()`, not hardcoded strings)
+- Names must be realistic for the target demographic
+- Status values must cover the full range (positive, neutral, warning, negative)
+
+```ts
+// ✅ Realistic mock data
+const mockData = {
+  userName: '[REALISTIC FIRST NAME]',
+  balance: [REALISTIC AMOUNT FOR USER SEGMENT],
+  nextPayday: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000), // 4 days from now
+  recentTransactions: [
+    { id: '1', merchant: '[REAL MERCHANT NAME]', amount: -[REALISTIC AMOUNT], date: new Date(), category: '[CATEGORY]' },
+    { id: '2', merchant: '[REAL MERCHANT NAME]', amount: -[REALISTIC AMOUNT], date: new Date(Date.now() - 86400000), category: '[CATEGORY]' },
+  ],
+};
+
+// ❌ Placeholder data
+const badData = {
+  userName: 'John Doe',
+  balance: 1000,
+  recentTransactions: [{ id: '1', merchant: 'Store', amount: -50 }],
+};
+```
+
+---
+
+## Phone Frame Wrapper
+
+Every screen-level prototype must include the phone frame wrapper per `05-design-system.mdc` specs:
+
+```tsx
+const PhoneFrame = ({ children }: { children: React.ReactNode }) => (
+  <div style={{
+    width: [FRAME_WIDTH],
+    minHeight: [FRAME_HEIGHT],
+    backgroundColor: 'var(--bg-primary)',
+    borderRadius: 44,
+    overflow: 'hidden',
+    boxShadow: 'var(--shadow-lg)',
+    fontFamily: 'var(--font-family)',
+    position: 'relative',
+  }}>
+    {/* Status bar */}
+    <div style={{
+      height: [STATUS_BAR_HEIGHT],
+      backgroundColor: 'var(--bg-secondary)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: '0 var(--space-20)',
+    }}>
+      <span style={{ fontSize: 15, fontWeight: 600 }}>[TIME]</span>
+      {/* Signal / battery icons */}
+    </div>
+
+    {/* Scrollable content */}
+    <div style={{ flex: 1, overflowY: 'auto', paddingBottom: [BOTTOM_NAV_HEIGHT] }}>
+      {children}
+    </div>
+  </div>
+);
+```
+
+---
+
+## Interactions & Animation
+
+```tsx
+// ✅ Micro-interaction — button press (100-150ms)
+const buttonStyle = {
+  transition: 'transform 100ms ease, opacity 100ms ease',
+};
+const buttonPressedStyle = {
+  transform: 'scale(0.97)',
+  opacity: 0.85,
+};
+
+// ✅ Panel expand (200-300ms)
+const panelStyle = {
+  transition: 'max-height 250ms ease-out, opacity 250ms ease-out',
+};
+```
+
+Respect `prefers-reduced-motion`:
+
+```tsx
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const transitionDuration = prefersReducedMotion ? '0ms' : '250ms';
+```
+
+---
+
+## TypeScript Standards
+
+```ts
+// ✅ Explicit types — no `any`
+interface Transaction {
+  id: string;
+  merchant: string;
+  amount: number;   // Always in cents or consistent unit — document which
+  date: Date;
+  category: TransactionCategory;
+}
+
+type TransactionCategory = '[CATEGORY_1]' | '[CATEGORY_2]' | '[CATEGORY_3]';
+
+// ❌ Never
+const handler = (data: any) => { ... };
+```
+
+---
+
+## Prototype Output Checklist
+
+Before presenting any prototype, verify:
+
+- [ ] All colors use `var(--token-name)` — no hex literals
+- [ ] All spacing uses `var(--space-N)` — no px literals
+- [ ] Loading, error, empty, and success states all present
+- [ ] Mock data is realistic, not placeholder
+- [ ] Phone frame wrapper applied with correct dimensions
+- [ ] All interactive elements meet 44px touch target minimum
+- [ ] Font substitution noted (e.g., "DM Sans used in place of [PRIMARY FONT]")
+- [ ] Which design system components are represented — noted at bottom of file
+
+---
+
+## Prototype Output Note Template
+
+Include this at the bottom of every prototype file as a comment:
+
+```tsx
+/*
+  MLDS/[DESIGN SYSTEM] Components Represented:
+  - [Component 1 name]: [Which element in the prototype]
+  - [Component 2 name]: [Which element]
+
+  Token Substitutions:
+  - Font: [WEB FONT] used in place of [PRIMARY FONT] (not available via CDN)
+  - [Any other token approximations and why]
+
+  States Covered:
+  - [Loading / Error / Empty / Populated — note which are implemented]
+
+  Not Covered (out of scope for this prototype):
+  - [List anything intentionally excluded]
+*/
+```

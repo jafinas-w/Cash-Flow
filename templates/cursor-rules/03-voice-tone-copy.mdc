@@ -1,0 +1,161 @@
+---
+description: Brand voice, tone, and copywriting rules. Governs every piece of text generated for this project. Builds on 01-project-context.mdc and 02-ai-role-ux-standards.mdc.
+alwaysApply: true
+---
+
+# Voice, Tone & Copywriting
+
+> **What this file is:** The definitive source for how this product sounds. Every AI-generated string — CTAs, labels, error messages, tooltips, onboarding copy, empty states — must pass these rules before being presented.
+>
+> **Depends on:** `01-project-context.mdc` (who we're talking to), `02-ai-role-ux-standards.mdc` (how to evaluate)
+> **Related rules:** `04-workflow-shortcuts.mdc` (/copy and /check commands)
+
+---
+
+## Brand Voice
+
+**In three words:** [WORD 1] · [WORD 2] · [WORD 3]
+
+**Extended description:** [2–3 sentences. What does the brand sound like? What does it never sound like? What feeling should every sentence leave the user with?]
+
+**Voice is NOT:** [3 anti-patterns to avoid — e.g., "corporate", "paternalistic", "over-casual", "vague", "alarmist"]
+
+---
+
+## Writing Principles
+
+1. **[PRINCIPLE 1 NAME]** — [What it means in practice. E.g., "Lead with what the user gets, not what they have to do."]
+2. **[PRINCIPLE 2 NAME]** — [What it means. E.g., "First-person framing: 'You have $342 left' not 'Available balance: $342'"]
+3. **[PRINCIPLE 3 NAME]** — [What it means. E.g., "Every word earns its place — if it doesn't add meaning, cut it."]
+4. **[PRINCIPLE 4 NAME]** — [What it means. E.g., "Specificity over generality — 'Earn 2% back on groceries' not 'Earn rewards'"]
+5. **[PRINCIPLE 5 NAME]** — [What it means. E.g., "Reduce anxiety, don't amplify it — status states should be informative, not alarming."]
+
+---
+
+## Tone Arc
+
+Tone shifts based on the user's situation. Define the arc here:
+
+| Situation | Tone | Example |
+|---|---|---|
+| [Positive state — user is ahead/winning] | [Tone: warm, celebratory, confident] | "[Example string]" |
+| [Neutral state — on track] | [Tone: calm, reassuring, clear] | "[Example string]" |
+| [Warning state — needs attention] | [Tone: direct but not alarming] | "[Example string]" |
+| [Negative state — shortfall, error, risk] | [Tone: urgent but actionable, never catastrophizing] | "[Example string]" |
+
+---
+
+## Hard Rules (Non-Negotiable)
+
+- **[RULE 1]** — [E.g., "No emdashes in any copy, ever. Use a comma, period, or rewrite the sentence."]
+- **[RULE 2]** — [E.g., "Never use vague value terms without specificity: 'earn cashback' must name how much and from what."]
+- **[RULE 3]** — [E.g., "Never use regulatory-sensitive language: 'loan', 'borrow', 'interest' on EWA features."]
+- **[RULE 4]** — [E.g., "No passive voice in CTAs — 'Get started' not 'Get started now' (or worse, 'You can get started')."]
+- **[RULE 5]** — [E.g., "No jargon the user didn't bring to the table."]
+
+---
+
+## CTA Patterns
+
+CTAs must name the outcome, not the action. They must be specific enough that the user knows exactly what happens next.
+
+| Context | Weak (avoid) | Strong (use) |
+|---|---|---|
+| [Primary conversion] | "Submit" / "Continue" | "[Outcome-oriented label]" |
+| [Confirmation] | "OK" / "Got it" | "[Confirms what the user just agreed to]" |
+| [Destructive action] | "Delete" | "[Names what will be lost]" |
+| [Empty state CTA] | "Add one" | "[Explains the value of adding one]" |
+| [Onboarding step] | "Next" | "[Names what comes next]" |
+
+---
+
+## Error Message Pattern
+
+Every error must answer three questions in order:
+1. **What happened** — State the failure plainly, without blame
+2. **Why it happened** — Only if it's useful and non-technical
+3. **What to do next** — A specific, actionable step
+
+```
+[EXAMPLE]
+❌ "Something went wrong."
+✅ "We couldn't load your [data]. Check your connection and try again."
+```
+
+---
+
+## Empty State Pattern
+
+Every empty state must:
+1. Explain **why** it's empty (not just "No data yet")
+2. Give a **single, specific action** the user can take
+3. Keep the **tone consistent** with the moment (low-pressure for optional features, clear for essential ones)
+
+```
+[EXAMPLE]
+❌ "No transactions found."
+✅ "Your first transaction will show up here. [Link your account] to get started."
+```
+
+---
+
+## Onboarding & Instruction Copy
+
+- Lead with the benefit, not the step
+- Write for scanning, not reading — one idea per line
+- Never explain the interface ("tap the button below") — explain the outcome ("Save your first $50")
+- Progress indicators should name the outcome at the end of the flow, not just the step number
+
+---
+
+## Status States
+
+Status labels should follow a conversational arc. Never use raw data as a status label. Always interpret it for the user.
+
+```
+[DOMAIN-SPECIFIC EXAMPLE STATUS ARC]
+❌ "Balance: $23.17"
+✅ "You're running low — $23 left this week."
+
+❌ "Status: Active"
+✅ "Your [product] is working."
+```
+
+---
+
+## Self-Audit (Run Before Presenting Any Copy)
+
+Before presenting copy, check every string against these:
+
+- [ ] **Clarity** — Does a new user understand it in one read?
+- [ ] **Brevity** — Can any word be removed without losing meaning?
+- [ ] **Tone** — Does it match the emotional state of the moment?
+- [ ] **Action-orientation** — Does it tell the user what to do or what they get?
+- [ ] **Specificity** — Does it avoid vague terms ("earn," "offer," "get more")?
+- [ ] **Hard rules** — Does it pass every hard rule listed above?
+- [ ] **Accessibility** — Does it work without color or icons to support it?
+
+If a stronger version exists, lead with that version and explain why. Never present a single option without confirming it is the strongest recommendation.
+
+---
+
+## Tested Copy Patterns
+
+Log validated copy patterns here as the project matures:
+
+| Pattern | Validated String | Why It Works |
+|---|---|---|
+| [Context] | "[String]" | [Rationale] |
+| [Context] | "[String]" | [Rationale] |
+
+---
+
+## Escalation Signals (Flag Automatically)
+
+Flag these without being asked:
+- Any copy using a [hard rule violation — e.g., emdash, vague value term, regulatory language]
+- Any CTA that names the action instead of the outcome
+- Any error message without a recovery step
+- Any empty state without an action
+- Any status label that reads as raw data rather than interpreted insight
+- Any copy that amplifies anxiety in a [high-stress context]

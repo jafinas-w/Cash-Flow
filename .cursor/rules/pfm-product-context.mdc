@@ -1,0 +1,200 @@
+# PFM Product Context — MoneyLion
+
+> **What this file is:** Always-on context for all Personal Finance Management (PFM) feature work in this workspace. Covers the PFM product pillar, shared personas, and per-feature context. Add a new feature section when work begins on a new PFM feature.
+>
+> **Related files:**
+> - `company-context.mdc` — Company strategy, user segments, product surface (the "what and why" file)
+> - `project-instructions.mdc` — Design consulting role, UX principles, feedback frameworks
+> - `MLDS-4_0-Reference.mdc` — Visual tokens, component specs, spacing, colors
+> - `workflow-instruction.mdc` — Shorthand triggers, response formats, session patterns
+>
+> **Feature reference docs (detailed specs, phases, risks):**
+> - `features/cash-flow/brief.md` — Problem statement, vision, success metrics, open questions
+> - `features/cash-flow/design-spec.md` — Screen-by-screen specs, MLDS component map, copy reference
+> - `features/cash-flow/phases.md` — Build phases, locked decisions, open items
+> - `features/cash-flow/risks.md` — Risk register across onboarding, STS, actions, cross-cutting
+
+---
+
+## PFM Product Overview
+
+PFM (Personal Finance Management) is a core cross-cutting capability within MoneyLion — not a single screen, but a system of features that help users understand and act on their financial picture.
+
+PFM sits within MoneyLion's **"See" pillar**: *Know what's coming before it hits — bills, paydays, shortfalls, safe-to-spend balance.*
+
+PFM features are designed to surface insights that drive action across other MoneyLion products. A low balance insight leads to an Instacash offer. An upcoming large bill surfaces a Split offer. Detecting spending drift triggers a savings nudge. PFM is the intelligence layer — the products are the response.
+
+**Current active features in this workspace:**
+- Cash Flow (v1 — in prototype/build)
+
+**Planned future features:** (add sections below as work begins)
+
+---
+
+## Personas
+
+These personas apply across all PFM features. Each has distinct needs, stress levels, and design implications. Every screen design should consider which persona(s) it primarily serves.
+
+---
+
+### Primary Persona: Everyday Money Manager
+
+**Profile:** Adult with regular income, juggling bills, variable expenses, and some savings goals. Uses the app several times a week to check balances and recent transactions.
+
+**Jobs-to-be-done:**
+- When I open my banking app, I want to quickly see how much money I can safely spend so that I can make everyday purchase decisions with confidence.
+- When I review my accounts, I want to understand what upcoming bills and subscriptions will be taken out so that I can avoid overdrafts and surprises.
+- When I look at my spending, I want to see my transactions grouped into meaningful categories so that I can understand where my money is going and adjust if needed.
+
+**Design implications:** Default/happy path. Prioritize quick scanability, balance clarity, and at-a-glance status. Short scroll depth. Information above the fold that answers "where do I stand right now?"
+
+---
+
+### Secondary Persona: Planner and Goal Setter
+
+**Profile:** Motivated to improve financial health, maintains basic budget in spreadsheets or other apps, willing to engage more deeply with financial tools.
+
+**Jobs-to-be-done:**
+- When I plan my month, I want to see my typical income and recurring expenses so that I can understand my leftover money for goals and discretionary spending.
+- When I evaluate my financial progress, I want to see trends in my spending by category over time so that I can identify areas to cut back or optimize.
+
+**Design implications:** Trend views, spending-over-time data, recurring expense visibility. Willing to scroll and engage with detail. Responds well to progress indicators and historical context.
+
+---
+
+### Secondary Persona: Financially Anxious User
+
+**Profile:** Living paycheck to paycheck or with irregular income, often worried about overdrafts and declined payments, checks balances frequently.
+
+**Jobs-to-be-done:**
+- When I am about to make a purchase, I want to know if my upcoming bills and recent card swipes will clear my account so that I can avoid overdrafts and fees.
+- When I see a pending or unfamiliar transaction, I want clear information about what it is and how it affects my available funds so that I can feel secure and take action if needed.
+
+**Design implications:** STS accuracy matters most here. Pending transaction clarity is critical. Copy must reduce anxiety, not amplify it. Loss framing must be used carefully — chronic loss framing worsens stress for this segment. Offer placements must never feel predatory in stress states.
+
+---
+
+## User Stories (Shared Across PFM Features)
+
+### Accounts and Overview
+- As a customer, I want to see all of my accounts in one consolidated view so that I can quickly understand my overall financial position.
+- As a customer, I want each account to clearly show my current balance, available balance, and Safe to Spend so that I know what portion of my money is truly available.
+- As a customer, I want to understand at a glance which accounts are primarily for spending versus saving so that I can use them appropriately.
+
+### Transaction Enrichment and Categorization
+- As a customer, I want merchant names and logos to be cleaned and standardized so that I can easily recognize where I spent money.
+- As a customer, I want my transactions to be automatically categorized into simple, meaningful categories so that I can understand my spending patterns without doing manual work.
+- As a customer, I want to see which transactions are pending versus posted and how they affect my available funds so that I can avoid surprises when they settle.
+
+### Safe to Spend and Forecasting
+- As a customer, I want the app to calculate a Safe to Spend amount that subtracts my expected bills and obligations from my balance so that I can safely make discretionary purchases.
+- As a customer, I want to see a simple view of upcoming recurring payments and their expected dates so that I can plan my cash flow over the coming weeks.
+
+### Insights and Guidance
+- As a customer, I want to receive clear, timely insights about unusual spending, bill changes, or low Safe to Spend so that I can adjust my behavior before issues occur.
+- As a customer, I want any insights or alerts to be grounded in simple explanations and clear numbers so that I can trust and act on them.
+
+---
+
+## Feature: Cash Flow
+
+> **Status:** v1 prototype complete through Phase 7. Phase 8 (polish, edge cases, accessibility) not yet started.
+> **Prototype:** `cashflow-prototype/src/App.tsx`
+> **Detailed specs:** `features/cash-flow/`
+
+### What It Is
+
+Cash Flow helps users see where they stand, what's coming, and how much they can safely spend before their next paycheck. The core capability is **Safe to Spend (STS)** — a single number that answers: *"How much can I spend right now and still make it to my next payday without getting caught off guard?"*
+
+The feature is progressively enhanced based on data depth:
+
+| User Tier | Data State | Experience |
+|---|---|---|
+| Manual | User-entered income and bills only | Static STS estimate, labeled "Expected after bills" |
+| Linked | Bank account connected via BV | Real-time STS with detected bills, spending pace, and pay cycle awareness |
+
+### Navigation Placement (Locked — D11 equivalent)
+Cash Flow is a card on the Home tab that opens into a dedicated full-screen hub. It is **not** a separate bottom nav tab.
+
+### STS Formula (Locked per design spec)
+- **Linked users:** `Current balance − committed upcoming expenses = STS`
+- **Manual users:** `Entered income − entered bills = STS`
+- "Committed" = recurring bills, subscriptions, and scheduled transfers detected in transaction history
+- Estimated discretionary spend (groceries, gas) is shown separately as "typical spending" context — **not subtracted from STS**
+
+### Copy Rules — Always Apply to Cash Flow
+- STS is always labeled "Estimated" with an as-of timestamp until the user has 2+ full pay cycles of clean data
+- Manual users see "Expected after bills" (not "Safe to Spend") — legal distinction, pending final review
+- Instacash copy must use: "Get covered," "spot you," "bridge the gap," "stay on track," "access up to"
+- Instacash copy must never use: "borrow," "loan," "lend," "credit," "advance" (unless pre-approved by legal)
+- No accuracy promises in onboarding copy ("real-time," "always up to date")
+- No cents in STS number — whole dollars only (reduces false precision risk)
+- Status arc is: "You're Ahead" → "Budget's Tight" → "You May Come Up Short"
+- No emdashes in any copy (applies globally, reinforced here)
+
+### Locked Design Decisions (Do Not Revisit Without Flagging)
+
+| Decision | What It Is |
+|---|---|
+| D1 | BV-link prompt is never suppressed permanently. Always recoverable via Settings |
+| D2 | Manual entries not matched by BV detection persist as user-confirmed obligations after linking |
+| D3 | Manual-only users: replace total balance card with "Let's Get You Started" prompt |
+| D4 | RoarMoney ≠ BV-linked unless user set up Direct Deposit via Plaid |
+| D6 | Bill review gate is mandatory after BV-link before STS is shown |
+| D9 | STS formula and label differ between linked and manual users |
+| D10 | Pending transactions count as committed obligations in STS |
+| D13 | "Reconnect needed" and "Stale data" are distinct UI states. Stale = degraded accuracy. Broken = act now |
+| D14 | Credit card accounts excluded from total balance calculation |
+| D15 | Savings accounts included in total balance but excluded from STS |
+| D18 | Live STS deferred to a mature phase. v1 is snapshot-based with freshness/confidence messaging |
+
+### Instacash Bridge Card Rules
+- Trigger: STS drops below 10% of user's typical pay-cycle income
+- Placement: First card in "For You" section. **Never above the hero** (above-hero = system warnings only)
+- Dismissal: 3 dismissals in one pay cycle → suppress until next cycle
+- Must include "Why am I seeing this?" transparency link
+- Copy tone: helpful offer, not urgent pressure
+
+### State Naming (For You and For Prototypes)
+Use these exact terms for user state references:
+- `manual-only` — no linked accounts, manual data entered
+- `roarmoney-only` — RoarMoney account only, no Plaid DD
+- `bv-linked` — external bank account connected via BV/Plaid
+- Confidence tiers: `partial view` → `medium confidence` → `high confidence`
+- Cash flow states: `ahead` / `tight` / `short`
+- Error states: `stale` / `reconnect needed` / `missing transactions` / `still learning`
+
+### Success Metrics
+- Users can answer "can I afford this?" without leaving the app
+- Reduction in overdraft incidents among active Cash Flow users
+- Increase in return visits around paycheck timing windows
+- Natural Instacash conversion for at-risk users (low STS before payday)
+
+### Open Questions (Pending External Input)
+- O1: Minimum transaction history threshold for confident recurring detection (Engineering)
+- O4: Legal review of STS label distinction (linked: "Safe to Spend" vs manual: "Expected after bills")
+- O5: Notification channel rules and consent constraints for cash flow alerts (Legal/Compliance)
+- O6: North star metrics sign-off: overdraft reduction, trust score, return visits (PM + Analytics)
+
+### Out of Scope (Cash Flow v1)
+- Long-term budgeting or savings planning
+- Investment or wealth tracking
+- Bill pay functionality
+- Live/reactive STS (gated to future phase, BV-linked high confidence users only)
+
+---
+
+## Adding a New PFM Feature
+
+When starting work on a new PFM feature:
+
+1. Add a new `## Feature: [Name]` section to this file following the Cash Flow section format
+2. Create `features/[feature-name]/` with: `brief.md`, `design-spec.md`, `phases.md`, `risks.md`
+3. Create `prototypes/[feature-name]/` for the React prototype
+
+Do not create a separate workspace or duplicate the four core `.cursor/rules/` files. All PFM features share the same rules infrastructure.
+
+---
+
+*Last updated: April 2026*
+*Owner: Jaf Inas / PFM Team*
