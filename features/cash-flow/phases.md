@@ -543,6 +543,145 @@ All 7 states reachable by combining "Widget / profile state" + "Linked state ove
 
 ---
 
+## Phase 9 — RoarMoney DD Gating: State + PaycheckConfirmScreen 🟡 ⬜
+
+**Why this phase:** Direct deposit requires a RoarMoney account (routing + account numbers). Users who only have a linked external account (e.g., Chase via Plaid) cannot set up DD into MoneyLion. Every "Set up direct deposit" CTA in the prototype was previously shown to all users regardless of RoarMoney status, which is misleading for non-RM users. This phase adds the structural state and gates the income confirmation flow.
+
+**Goal:** Introduce `hasRoarMoney` as a first-class state flag. Gate all DD paths in `PaycheckConfirmScreen` so non-RM users see a soft RoarMoney cross-sell instead of a direct DD setup action.
+
+**Estimated effort:** 1 session
+
+### What will be built
+
+**New state: `hasRoarMoney` (boolean)**
+- Added at App level alongside `accountState`, `linkedIncomeStatus`, etc.
+- Default: `false`
+- Auto-syncs with `accountState`: `roarmoney-only` / `roarmoney-dd` = `true`; `new-user` / `manual-only` / `bv-linked` = `false`
+- Can be manually overridden via demo controls for edge-case testing (e.g., BV-linked user who also has RM)
+
+**Demo controls: "Has RoarMoney" toggle**
+- Added to Onboarding flags section of the prototype controls panel
+- Styled like existing "Simulate joint account" / "Simulate low history" toggles
+- Auto-syncs with `accountState` changes but supports manual override
+
+**PaycheckConfirmScreen gating**
+
+| Signal state | Has RoarMoney | Behavior |
+|---|---|---|
+| Detected (paycheck found) | Yes | Unchanged: "Set up direct deposit instead" outline button |
+| Detected (paycheck found) | No | Replace DD button with soft cross-sell card (Teal-100 bg, "Learn about RoarMoney" CTA) |
+| Not detected (no paycheck) | Yes | Unchanged: DD recommended card + "Set up direct deposit" primary CTA |
+| Not detected (no paycheck) | No | DD card becomes RM cross-sell; manual entry promoted to primary action path |
+
+### Dependencies
+- Phases 1–8 complete ✅
+- No new screens; modifies existing `PaycheckConfirmScreen` and App-level state
+
+### Success criteria
+- [ ] "Has RoarMoney" toggle visible in demo controls and auto-syncs with account state chips
+- [ ] PaycheckConfirmScreen (detected): non-RM users see cross-sell card, not DD button
+- [ ] PaycheckConfirmScreen (not-detected): non-RM users see manual entry as primary path, RM as upsell
+- [ ] RM users see unchanged DD behavior in both branches
+- [ ] No regressions in confidence scoring or navigation
+
+---
+
+## Phase 10 — RoarMoney DD Gating: ConnectionsScreen + Documentation 🟡 ⬜
+
+**Why this phase:** With Phase 9's `hasRoarMoney` state in place, the Connections hub needs to reflect the same product reality. RM users who haven't set up DD should see a clear upgrade path. Non-RM users should not be nudged toward DD since they can't act on it without a separate RM onboarding.
+
+**Goal:** Add a conditional DD upgrade card to the Connections hub for RM users. Adjust income row copy to remove DD references for non-RM users. Document the full RoarMoney gating pattern.
+
+**Estimated effort:** 1 session
+
+### What will be built
+
+**ConnectionsScreen: DD upgrade card**
+- Positioned between "What we can see vs guess" and "Connected accounts" cards
+- Only renders when ALL conditions are true:
+  - `hasRoarMoney === true`
+  - `linkedIncomeStatus !== "dd"` (DD not already active)
+  - `accountState !== "new-user"`
+- Content: Teal-100 bg, title "Get paid up to 2 days early", body explaining DD benefits for Cash Flow confidence + early paycheck access, outline CTA "Set up direct deposit"
+- For non-RM users: card does not render. They've reached their confidence ceiling without RM onboarding.
+
+**ConnectionsScreen: income row copy adjustments**
+
+| State | Has RM | Copy change |
+|---|---|---|
+| `linkedIncomeStatus === "confirmed"`, linked | Yes | Add subtle upgrade hint: "Get exact payday amounts. Set up direct deposit." with teal link |
+| `linkedIncomeStatus === "confirmed"`, linked | No | Clean copy: "$1,400 biweekly, confirmed" + "Detected from your linked bank account." No DD mention |
+| All other states | Either | No changes |
+
+### State matrix (full reference)
+
+| User type | Income paths shown | DD CTA | Confidence ceiling |
+|---|---|---|---|
+| New user, no RM | Manual, Link bank | Hidden | Getting started |
+| Manual only, no RM | Edit paycheck, Link bank | Hidden | Manual estimate |
+| BV-linked, no RM | Confirm detected, Manual | Cross-sell card ("Learn about RM") | High confidence |
+| BV-linked, has RM | Confirm detected, Manual, DD | "Set up direct deposit" (active) | High confidence |
+| RM only | Link external, DD | "Set up direct deposit" (active) | Partial view |
+| RM + DD | All complete | Already done | High confidence |
+
+### Confidence model: no changes
+- `"confirmed"` and `"dd"` both map to "High confidence" in the UI
+- The product difference (confirmed pattern vs actual DD rails) is a data-quality distinction, not a confidence-label distinction at this stage
+
+### Dependencies
+- Phase 9 complete (provides `hasRoarMoney` state and demo toggle)
+
+### Success criteria
+- [ ] DD upgrade card renders only for RM users who haven't set up DD
+- [ ] DD upgrade card hidden for non-RM users and new users
+- [ ] Income row copy for confirmed + no-RM does not mention direct deposit
+- [ ] Income row copy for confirmed + has-RM includes DD upgrade hint
+- [ ] No regressions in Connections hub layout across all 7 demo states
+
+---
+
+## Final Phase — Polish, Edge Cases, and Iteration 🟡 ⬜
+
+**Why last:** Everything must be stable before polish is applied. Edge cases are found by walking through a complete, working prototype.
+
+**Goal:** All edge cases covered, interactions feel native, ready for stakeholder review and user testing.
+
+**Estimated effort:** 2–3 sessions
+
+### Edge cases to cover
+
+| Case | Screen | Treatment |
+|---|---|---|
+| Zero balance + committed bills | CF linked | At-risk state, Instacash nudge triggered |
+| Negative balance (overdraft) | CF linked | STS shows negative, urgent red state, IC nudge prominent |
+| No bills detected after linking | Bill review gate | Empty state with manual add prompt, cannot proceed without adding at least one item |
+| All bills removed by user | CF linked | Zero committed obligations, STS = balance minus variable minus buffer |
+| Paycheck not yet detected | CF linked | No income anchor — prompt to confirm paycheck date manually |
+| Multiple paychecks (two jobs) | CF linked | Multiple income entries, STS uses combined cadence |
+| First session after reconciliation | CF linked | Brief transition moment: "Your Cash Flow is now based on your real accounts" |
+
+### Interaction polish
+- Screen transitions: slide-in for forward navigation, slide-out for back
+- SpendBar: animate fill from left on first load (300ms ease)
+- STS number: count-up on first appearance (200ms)
+- Skeleton screens on all data-loading states
+
+### Accessibility pass
+- WCAG AA contrast check on all semantic color combinations
+- Touch targets audit — 44px minimum on every interactive element
+- Screen reader labels on all icon-only buttons and status indicators
+
+### Metrics instrumentation (pending O6)
+- Instrument: first-time STS view, bill review completion rate, BV-link conversion from manual prompt, reconnect completion rate
+- Anti-metrics: "number is wrong" flags, manual override frequency, prompt dismissal rate
+
+### Future-state guardrails (locked now, build later)
+- Live transaction-reactive STS is out of v1 scope and gated to BV-linked + high confidence users only (D18)
+- If confidence drops below high (stale/reconnect/missing paycheck), STS reverts to snapshot mode with explicit messaging
+- Manual post-link obligations remain fixed recurring entries first; future auto-detection may suggest merge/replace, never silent overwrite (D17)
+
+---
+
 ## Build Order Summary
 
 ```
@@ -562,16 +701,23 @@ gate             reconciliation                   states + settings
 
                          ↓
 
-                      Phase 8                     Final Phase
-                 ────────────────────────         ────────────────────────
-                 Connections Hub                  Polish, edge cases,
-                 (Cash Flow Setup screen)         accessibility, metrics
+Phase 8                  Phase 9                   Phase 10
+────────────────────     ────────────────────────   ────────────────────────
+Connections Hub          RoarMoney DD gating:       RoarMoney DD gating:
+(Cash Flow Setup)        state + paycheck screen    connections + docs
 
+                                    ↓
+
+                              Final Phase
+                         ────────────────────────
+                         Polish, edge cases,
+                         accessibility, metrics
 ```
 
 **Phases 2 and 3** are built together — same component, same session.
 **Phase 6** is intentionally last among new screens — highest complexity, novel UX pattern, depends on Phase 5.
 **Phase 8** slots after Phase 7 — depends on all account states and CF screen being stable before the hub is built on top.
+**Phases 9 and 10** layer RoarMoney awareness onto the existing prototype. Phase 9 is structural (state + paycheck screen); Phase 10 consumes that state in the Connections hub.
 **No phase should start until the one before it is marked ✅.**
 
 ---

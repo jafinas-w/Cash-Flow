@@ -341,13 +341,19 @@ function CashFlowWidget({
 }
 
 function AccountsScreen({
-  accountState, linkedIncomeStatus, onWidgetTap, onConnections,
+  accountState, linkedIncomeStatus, hasRoarMoney, onWidgetTap, onConnections,
 }: {
-  accountState:AccountState; linkedIncomeStatus:LinkedIncomeStatus; onWidgetTap:()=>void; onConnections:()=>void;
+  accountState:AccountState; linkedIncomeStatus:LinkedIncomeStatus; hasRoarMoney:boolean; onWidgetTap:()=>void; onConnections:()=>void;
 }) {
-  const totalBalance = totalBalanceFor(accountState);
-  const showsRoarMoney = accountState !== "new-user" && accountState !== "manual-only";
+  const showsRoarMoney = hasRoarMoney || accountState === "roarmoney-only" || accountState === "roarmoney-dd";
   const showsExternalAccounts = accountState === "bv-linked";
+  const totalBalance = showsRoarMoney && showsExternalAccounts
+    ? ACCOUNT_BALANCE_DATA.linked.roarMoney + ACCOUNT_BALANCE_DATA.linked.checking + ACCOUNT_BALANCE_DATA.linked.savings
+    : showsRoarMoney
+    ? ACCOUNT_BALANCE_DATA.roarmoney.roarMoney
+    : showsExternalAccounts
+    ? ACCOUNT_BALANCE_DATA.linked.checking + ACCOUNT_BALANCE_DATA.linked.savings
+    : null;
 
   return (
     <div>
@@ -358,9 +364,11 @@ function AccountsScreen({
             <p style={{ margin:0, fontSize:11, color:T.text3, fontWeight:600, letterSpacing:"0.5px" }}>TOTAL BALANCE</p>
             <p style={{ margin:"4px 0 2px", fontSize:34, fontWeight:600, letterSpacing:-1 }}>{fmt(totalBalance)}</p>
             <p style={{ margin:0, fontSize:12, color:T.text3 }}>
-              {accountState === "roarmoney-only"
+              {showsRoarMoney && showsExternalAccounts
+                ? "Checking + Savings + RoarMoney (credit cards excluded)"
+                : showsRoarMoney
                 ? "RoarMoney only"
-                : "Checking + Savings + RoarMoney (credit cards excluded)"}
+                : "Checking + Savings (credit cards excluded)"}
             </p>
           </div>
         )}
@@ -447,7 +455,7 @@ function AccountsScreen({
 /* ═══════════════════════════════════════════════════════════════════
    SCREEN 2 — SPLASH / FEATURE INTRO
 ═══════════════════════════════════════════════════════════════════ */
-function SplashScreen({ onClose, onLinkBank, onManual }: { onClose:()=>void; onLinkBank:()=>void; onManual:()=>void }) {
+function SplashScreen({ onClose, onContinue }: { onClose:()=>void; onContinue:()=>void }) {
   return (
     <div>
       <div style={{ background:T.bgAccent, paddingBottom:24 }}>
@@ -491,22 +499,7 @@ function SplashScreen({ onClose, onLinkBank, onManual }: { onClose:()=>void; onL
           ))}
         </div>
 
-        <div style={{ background:T.bgCard, borderRadius:16, padding:"16px 20px", border:`1px solid ${T.border}`, display:"grid", gap:10 }}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-            <div>
-              <p style={{ margin:0, fontSize:14, fontWeight:600 }}>Link my bank account</p>
-              <p style={{ margin:"2px 0 0 0", fontSize:12, color:T.text2 }}>Most accurate · updates in real time</p>
-            </div>
-            <Badge label="Recommended" color={T.tealDark} bg={T.bgAccent} />
-          </div>
-          <PrimaryBtn label="Continue →" onClick={onLinkBank} bg={T.tealBright} />
-        </div>
-
-        <div style={{ textAlign:"center" }}>
-          <button onClick={onManual} style={{ background:"none", border:"none", fontSize:14, fontWeight:600, color:T.text2, cursor:"pointer", fontFamily:"inherit", textDecoration:"underline", textDecorationColor:T.border }}>Or enter my info manually</button>
-        </div>
-
-        <p style={{ margin:0, fontSize:11, color:T.text3, lineHeight:"16px", textAlign:"center" }}>Linking connects via Plaid. MoneyLion never stores your bank credentials.</p>
+        <PrimaryBtn label="Set up my Cash Flow →" onClick={onContinue} bg={T.tealBright} />
       </div>
     </div>
   );
@@ -957,9 +950,10 @@ function BillReviewScreen({ simulateLowHistory, needsReconciliation, onBack, onC
    SCREEN 4B-INCOME — PAYCHECK CONFIRMATION
 ═══════════════════════════════════════════════════════════════════ */
 function PaycheckConfirmScreen({
-  signal, onBack, onConfirmDetected, onUseManual, onUseDirectDeposit,
+  signal, hasRoarMoney, onBack, onConfirmDetected, onUseManual, onUseDirectDeposit,
 }: {
   signal: PaycheckSignal;
+  hasRoarMoney: boolean;
   onBack: () => void;
   onConfirmDetected: () => void;
   onUseManual: () => void;
@@ -1002,11 +996,26 @@ function PaycheckConfirmScreen({
             </div>
           </div>
           <PrimaryBtn label="Confirm income and continue →" onClick={onConfirmDetected} bg={T.tealDark} />
-          <button onClick={onUseDirectDeposit} style={{ height:42, border:`1px solid ${T.tealDark}`, borderRadius:999, background:"transparent", color:T.tealDark, fontWeight:600, fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>
-            Set up direct deposit instead
-          </button>
+          {hasRoarMoney ? (
+            <button onClick={onUseDirectDeposit} style={{ height:42, border:`1px solid ${T.tealDark}`, borderRadius:999, background:"transparent", color:T.tealDark, fontWeight:600, fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>
+              Set up direct deposit instead
+            </button>
+          ) : (
+            <div style={{ background:T.bgAccent, border:`1px solid ${T.borderAccent ?? "#B2FCF1"}`, borderRadius:14, padding:"12px 14px", display:"flex", gap:10, alignItems:"flex-start" }}>
+              <span style={{ fontSize:16, flexShrink:0, marginTop:1 }}>🦁</span>
+              <div>
+                <p style={{ margin:0, fontSize:13, fontWeight:600, color:T.tealDark }}>Want the most accurate Cash Flow?</p>
+                <p style={{ margin:"3px 0 0", fontSize:12, color:T.text2, lineHeight:"17px" }}>
+                  Direct deposit into RoarMoney gives us exact income data and lets you get paid up to 2 days early.
+                </p>
+                <button style={{ marginTop:8, height:30, padding:"0 14px", borderRadius:999, border:`1.5px solid ${T.tealDark}`, background:"transparent", color:T.tealDark, fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+                  Learn about RoarMoney
+                </button>
+              </div>
+            </div>
+          )}
           <button onClick={onUseManual} style={{ background:"none", border:"none", color:T.text2, fontSize:13, cursor:"pointer", padding:0, fontFamily:"inherit" }}>
-            This looks wrong — I will enter it manually
+            This looks wrong, let me enter it manually
           </button>
         </div>
       </div>
@@ -1020,15 +1029,34 @@ function PaycheckConfirmScreen({
         <div style={{ display:"grid", gap:8 }}>
           <h1 style={{ margin:0, fontSize:22, lineHeight:"30px", fontWeight:600, letterSpacing:"-0.5px" }}>We could not find a clear paycheck yet</h1>
           <p style={{ margin:0, fontSize:14, color:T.text2, lineHeight:"20px" }}>
-            We found bills, but your income pattern is unclear. Set up direct deposit for the most accurate Cash Flow.
+            {hasRoarMoney
+              ? "We found bills, but your income pattern is unclear. Set up direct deposit for the most accurate Cash Flow."
+              : "We found bills, but your income pattern is unclear. Enter your paycheck details so we can calculate your Cash Flow."}
           </p>
         </div>
-        <div style={{ background:T.bgAccent, border:`1px solid ${T.border}`, borderRadius:16, padding:"14px 14px", display:"grid", gap:8 }}>
-          <p style={{ margin:0, fontSize:13, color:T.text2 }}>Recommended</p>
-          <p style={{ margin:0, fontSize:15, fontWeight:600 }}>Set up direct deposit with RoarMoney</p>
-          <p style={{ margin:0, fontSize:13, color:T.text2, lineHeight:"18px" }}>Income updates automatically and improves confidence in your weekly number.</p>
-        </div>
-        <PrimaryBtn label="Set up direct deposit →" onClick={onUseDirectDeposit} bg={T.tealDark} />
+        {hasRoarMoney ? (
+          <>
+            <div style={{ background:T.bgAccent, border:`1px solid ${T.border}`, borderRadius:16, padding:"14px 14px", display:"grid", gap:8 }}>
+              <p style={{ margin:0, fontSize:13, color:T.text2 }}>Recommended</p>
+              <p style={{ margin:0, fontSize:15, fontWeight:600 }}>Set up direct deposit with RoarMoney</p>
+              <p style={{ margin:0, fontSize:13, color:T.text2, lineHeight:"18px" }}>Income updates automatically and improves confidence in your weekly number.</p>
+            </div>
+            <PrimaryBtn label="Set up direct deposit →" onClick={onUseDirectDeposit} bg={T.tealDark} />
+          </>
+        ) : (
+          <div style={{ background:T.bgAccent, border:`1px solid ${T.borderAccent ?? "#B2FCF1"}`, borderRadius:14, padding:"12px 14px", display:"flex", gap:10, alignItems:"flex-start" }}>
+            <span style={{ fontSize:16, flexShrink:0, marginTop:1 }}>🦁</span>
+            <div>
+              <p style={{ margin:0, fontSize:13, fontWeight:600, color:T.tealDark }}>Unlock the strongest Cash Flow accuracy</p>
+              <p style={{ margin:"3px 0 0", fontSize:12, color:T.text2, lineHeight:"17px" }}>
+                Open a RoarMoney checking account to set up direct deposit. Your income updates automatically and you can get paid up to 2 days early.
+              </p>
+              <button style={{ marginTop:8, height:30, padding:"0 14px", borderRadius:999, border:`1.5px solid ${T.tealDark}`, background:"transparent", color:T.tealDark, fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+                Learn about RoarMoney
+              </button>
+            </div>
+          </div>
+        )}
         {showManual ? (
           <div style={{ background:T.bgCard, border:`1px solid ${T.border}`, borderRadius:16, padding:"12px 12px", display:"grid", gap:10 }}>
             <p style={{ margin:0, fontSize:12, color:T.text3, fontWeight:600 }}>ENTER PAYCHECK MANUALLY</p>
@@ -1048,7 +1076,7 @@ function PaycheckConfirmScreen({
           </div>
         ) : (
           <button onClick={()=>setShowManual(true)} style={{ background:"none", border:"none", color:T.tealDark, fontSize:13, fontWeight:600, cursor:"pointer", textAlign:"left", padding:0, fontFamily:"inherit" }}>
-            Enter paycheck manually instead
+            {hasRoarMoney ? "Enter paycheck manually instead" : "Enter my paycheck manually →"}
           </button>
         )}
       </div>
@@ -1545,14 +1573,6 @@ function CashFlowScreen({
               <p style={{ margin:"2px 0 0", fontSize:12, color:T.text2 }}>Bills are linked, but paycheck timing or amount still needs confirmation for full-confidence Cash Flow.</p>
             </div>
           )}
-
-          <button style={{ height:52, border:"none", borderRadius:999, background: risk==="short" ? T.red : T.text1, color:"#FFF", fontWeight:600, fontSize:15, cursor:"pointer", fontFamily:"inherit" }}>
-            {profile === "manual"
-              ? "Review my entries"
-              : isReconnect
-              ? "Reconnect to update"
-              : risk === "short" ? "See coverage options" : "Plan this week"}
-          </button>
         </div>
 
         {/* Soft BV-link prompt — manual and RoarMoney-only states (D1) */}
@@ -1748,12 +1768,13 @@ function CashFlowScreen({
    SCREEN — CONNECTIONS HUB (Cash Flow Setup)
 ═══════════════════════════════════════════════════════════════════ */
 function ConnectionsScreen({
-  accountState, linkedOverlay, linkedIncomeStatus,
+  accountState, linkedOverlay, linkedIncomeStatus, hasRoarMoney,
   onBack, onLinkBank, onConfirmPaycheck, onGoToCashFlow, onManual,
 }: {
   accountState: AccountState;
   linkedOverlay: LinkedOverlay;
   linkedIncomeStatus: LinkedIncomeStatus;
+  hasRoarMoney: boolean;
   onBack: () => void;
   onLinkBank: () => void;
   onConfirmPaycheck: () => void;
@@ -1830,11 +1851,6 @@ function ConnectionsScreen({
           <h1 style={{ margin:0, fontSize:22, fontWeight:600, lineHeight:"30px", letterSpacing:"-0.5px" }}>
             {isNewUser ? "Build your Cash Flow picture" : "Add where bills and spend hit"}
           </h1>
-          <p style={{ margin:"6px 0 0", fontSize:14, color:T.text2, lineHeight:"20px" }}>
-            {isNewUser
-              ? "The more you connect, the more accurate your number. Start with your bank or enter info manually."
-              : "We already see income in RoarMoney. Link where rent, cards, and everyday spend debit to lift confidence further."}
-          </p>
         </div>
 
         {/* Reconnect alert banner */}
@@ -1874,6 +1890,77 @@ function ConnectionsScreen({
           <p style={{ margin:"10px 0 0", fontSize:12, color:T.text2, lineHeight:"17px" }}>{nextAction}</p>
         </div>
 
+        {/* What we can see vs guess — with data preview */}
+        <div style={{ background:T.bgCard, border:`1px solid ${T.border}`, borderRadius:20, padding:20, display:"grid", gap:12 }}>
+          <p style={{ margin:0, fontSize:11, fontWeight:600, color:T.text3, letterSpacing:"0.5px" }}>WHAT WE CAN SEE VS GUESS</p>
+
+          {/* Income & payday timing */}
+          <div style={{ display:"flex", alignItems:"flex-start", gap:12 }}>
+            <div style={{ width:22, height:22, borderRadius:999, border:`2px solid ${incomeSeen ? T.tealDark : incomePartial ? T.yellow : "#CCC"}`, background: incomeSeen ? T.tealDark : "transparent", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, marginTop:1 }}>
+              {incomeSeen && <span style={{ color:"#FFF", fontSize:11, fontWeight:700 }}>✓</span>}
+              {incomePartial && !incomeSeen && <span style={{ color:T.yellow, fontSize:13, fontWeight:700, lineHeight:1 }}>~</span>}
+            </div>
+            <div style={{ flex:1 }}>
+              <p style={{ margin:0, fontSize:14, fontWeight:600 }}>Income & payday timing</p>
+              {isNewUser ? (
+                <p style={{ margin:"3px 0 0", fontSize:12, color:T.text3, lineHeight:"17px" }}>No income data yet</p>
+              ) : isManual ? (
+                <>
+                  <p style={{ margin:"3px 0 0", fontSize:13, fontWeight:600, color:T.text1 }}>$2,800 biweekly</p>
+                  <p style={{ margin:"2px 0 0", fontSize:12, color:T.text2, lineHeight:"17px" }}>Based on what you entered. Link your bank for automatic detection.</p>
+                </>
+              ) : isRoarOnly ? (
+                <p style={{ margin:"3px 0 0", fontSize:12, color:T.text2, lineHeight:"17px" }}>Paycheck pattern detected in RoarMoney. Link your main spending account for a fuller picture.</p>
+              ) : isRoarDD ? (
+                <>
+                  <p style={{ margin:"3px 0 0", fontSize:13, fontWeight:600, color:T.tealDark }}>Direct deposit confirmed</p>
+                  <p style={{ margin:"2px 0 0", fontSize:12, color:T.text2, lineHeight:"17px" }}>We can anchor your pay period accurately.</p>
+                </>
+              ) : isLinked && incomeConfirmed ? (
+                <>
+                  <p style={{ margin:"3px 0 0", fontSize:13, fontWeight:600, color:T.tealDark }}>
+                    {linkedIncomeStatus === "dd" ? "Direct deposit confirmed" : "$1,400 biweekly, confirmed"}
+                  </p>
+                  <p style={{ margin:"2px 0 0", fontSize:12, color:T.text2, lineHeight:"17px" }}>We can anchor your pay period accurately.</p>
+                </>
+              ) : isLinked ? (
+                <>
+                  <p style={{ margin:"3px 0 0", fontSize:13, fontWeight:600, color:T.yellow }}>$1,400 detected biweekly</p>
+                  <p style={{ margin:"2px 0 0", fontSize:12, color:T.text2, lineHeight:"17px" }}>Needs confirmation. Confirm your paycheck to reach High confidence.</p>
+                </>
+              ) : null}
+            </div>
+          </div>
+
+          <div style={{ height:1, background:T.border }} />
+
+          {/* Bills, subs, everyday spend */}
+          <div style={{ display:"flex", alignItems:"flex-start", gap:12 }}>
+            <div style={{ width:22, height:22, borderRadius:999, border:`2px solid ${billsSeen ? T.tealDark : billsPartial ? T.yellow : "#CCC"}`, background: billsSeen ? T.tealDark : "transparent", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, marginTop:1 }}>
+              {billsSeen && <span style={{ color:"#FFF", fontSize:11, fontWeight:700 }}>✓</span>}
+              {billsPartial && !billsSeen && <span style={{ color:T.yellow, fontSize:13, fontWeight:700, lineHeight:1 }}>~</span>}
+            </div>
+            <div style={{ flex:1 }}>
+              <p style={{ margin:0, fontSize:14, fontWeight:600 }}>Bills, subs & everyday spend</p>
+              {isNewUser ? (
+                <p style={{ margin:"3px 0 0", fontSize:12, color:T.text3, lineHeight:"17px" }}>No bills data yet</p>
+              ) : isManual ? (
+                <>
+                  <p style={{ margin:"3px 0 0", fontSize:13, fontWeight:600, color:T.text1 }}>$928/mo across 2 bills</p>
+                  <p style={{ margin:"2px 0 0", fontSize:12, color:T.text2, lineHeight:"17px" }}>Based on bills you entered. Link your bank to detect charges automatically.</p>
+                </>
+              ) : isRoarOnly || isRoarDD ? (
+                <p style={{ margin:"3px 0 0", fontSize:12, color:T.text2, lineHeight:"17px" }}>Limited bill visibility. Link your external accounts to detect recurring charges.</p>
+              ) : isLinked ? (
+                <>
+                  <p style={{ margin:"3px 0 0", fontSize:13, fontWeight:600, color:T.tealDark }}>$955/mo across 5 recurring</p>
+                  <p style={{ margin:"2px 0 0", fontSize:12, color:T.text2, lineHeight:"17px" }}>Recurring charges detected across your accounts. Confirmed in bill review.</p>
+                </>
+              ) : null}
+            </div>
+          </div>
+        </div>
+
         {/* Connected accounts */}
         <div style={{ background:T.bgCard, border:`1px solid ${T.border}`, borderRadius:20, padding:20, display:"grid", gap:0 }}>
           <p style={{ margin:"0 0 12px", fontSize:11, fontWeight:600, color:T.text3, letterSpacing:"0.5px" }}>CONNECTED ACCOUNTS</p>
@@ -1884,7 +1971,7 @@ function ConnectionsScreen({
             </div>
           )}
 
-          {(isRoarOnly || isRoarDD || isLinked) && (
+          {hasRoarMoney && (
             <div style={{ display:"flex", alignItems:"center", gap:12, padding:"8px 0", borderBottom:`1px solid ${T.border}` }}>
               <div style={{ width:40, height:40, borderRadius:12, background:T.bgAccent, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:18 }}>🦁</div>
               <div style={{ flex:1 }}>
@@ -1939,51 +2026,6 @@ function ConnectionsScreen({
               ))}
             </>
           )}
-        </div>
-
-        {/* What we can see vs guess */}
-        <div style={{ background:T.bgCard, border:`1px solid ${T.border}`, borderRadius:20, padding:20, display:"grid", gap:12 }}>
-          <p style={{ margin:0, fontSize:11, fontWeight:600, color:T.text3, letterSpacing:"0.5px" }}>WHAT WE CAN SEE VS GUESS</p>
-
-          {/* Income & payday timing */}
-          <div style={{ display:"flex", alignItems:"flex-start", gap:12 }}>
-            <div style={{ width:22, height:22, borderRadius:999, border:`2px solid ${incomeSeen ? T.tealDark : incomePartial ? T.yellow : "#CCC"}`, background: incomeSeen ? T.tealDark : "transparent", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, marginTop:1 }}>
-              {incomeSeen && <span style={{ color:"#FFF", fontSize:11, fontWeight:700 }}>✓</span>}
-              {incomePartial && !incomeSeen && <span style={{ color:T.yellow, fontSize:13, fontWeight:700, lineHeight:1 }}>~</span>}
-            </div>
-            <div>
-              <p style={{ margin:0, fontSize:14, fontWeight:600 }}>Income & payday timing</p>
-              <p style={{ margin:"3px 0 0", fontSize:12, color:T.text2, lineHeight:"17px" }}>
-                {incomeSeen
-                  ? `${linkedIncomeStatus === "dd" ? "Direct deposit confirmed" : "Regular inflows into RoarMoney"} — we can anchor your pay period.`
-                  : incomePartial
-                  ? isManual
-                    ? "Based on what you entered. Link your bank for automatic detection."
-                    : "Regular inflows detected. Confirm your paycheck amount to lock this in."
-                  : "If rent or paycheck hits another account, we may under-count income until you link it."}
-              </p>
-            </div>
-          </div>
-
-          <div style={{ height:1, background:T.border }} />
-
-          {/* Bills, subs, everyday spend */}
-          <div style={{ display:"flex", alignItems:"flex-start", gap:12 }}>
-            <div style={{ width:22, height:22, borderRadius:999, border:`2px solid ${billsSeen ? T.tealDark : billsPartial ? T.yellow : "#CCC"}`, background: billsSeen ? T.tealDark : "transparent", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, marginTop:1 }}>
-              {billsSeen && <span style={{ color:"#FFF", fontSize:11, fontWeight:700 }}>✓</span>}
-              {billsPartial && !billsSeen && <span style={{ color:T.yellow, fontSize:13, fontWeight:700, lineHeight:1 }}>~</span>}
-            </div>
-            <div>
-              <p style={{ margin:0, fontSize:14, fontWeight:600 }}>Bills, subs & everyday spend</p>
-              <p style={{ margin:"3px 0 0", fontSize:12, color:T.text2, lineHeight:"17px" }}>
-                {billsSeen
-                  ? "Recurring charges detected across your accounts. Confirmed in bill review."
-                  : billsPartial
-                  ? "Based on bills you entered. Link your bank to detect charges automatically."
-                  : "If rent or cards pull from another bank, we may under-count commitments until you link it."}
-              </p>
-            </div>
-          </div>
         </div>
 
         {/* Action buttons */}
@@ -2061,6 +2103,11 @@ export default function App() {
   const [simulateJoint,  setSimulateJoint]  = useState(false);
   const [simulateLowHistory, setSimulateLowHistory] = useState(false);
   const [paycheckSignal, setPaycheckSignal] = useState<PaycheckSignal>("detected");
+  const [hasRoarMoney, setHasRoarMoney] = useState(false);
+
+  useEffect(() => {
+    setHasRoarMoney(accountState === "roarmoney-only" || accountState === "roarmoney-dd");
+  }, [accountState]);
 
   const go = (s: Screen) => setScreen(s);
 
@@ -2094,7 +2141,7 @@ export default function App() {
   };
 
   const continueAfterIncome = () => {
-    go("cashflow");
+    go("connections");
   };
 
   const handleIncomeDetectedConfirm = () => {
@@ -2115,10 +2162,10 @@ export default function App() {
   const handleReconciliationComplete = (keptUnmatchedManual: number) => {
     setCarriedManualObligations(keptUnmatchedManual);
     setNeedsReconciliation(false);
-    go("cashflow");
+    go("connections");
   };
 
-  const handleManualDone = () => { setAccountState("manual-only"); go("cashflow"); };
+  const handleManualDone = () => { setAccountState("manual-only"); go("connections"); };
 
   return (
     <>
@@ -2182,6 +2229,7 @@ export default function App() {
             <p style={{ margin:"0 0 8px", fontSize:10, fontWeight:600, color:T.text3, textTransform:"uppercase", letterSpacing:"0.6px" }}>Onboarding flags</p>
             <div style={{ display:"grid", gap:6 }}>
               {([
+                ["Has RoarMoney",           hasRoarMoney,        setHasRoarMoney],
                 ["Simulate joint account",  simulateJoint,       setSimulateJoint],
                 ["Simulate low history",    simulateLowHistory,  setSimulateLowHistory],
               ] as [string, boolean, (v:boolean)=>void][]).map(([label, active, setter]) => (
@@ -2200,7 +2248,7 @@ export default function App() {
             </div>
           </div>
 
-          <button onClick={()=>{ go("accounts"); setAccountState("new-user"); setRisk("tight"); setLinkedOverlay("none"); setLinkedIncomeStatus("unconfirmed"); setNeedsReconciliation(false); setCarriedManualObligations(0); setIsJointAccount(false); setJointShare(null); setSimulateJoint(false); setSimulateLowHistory(false); setPaycheckSignal("detected"); }} style={{ height:40, border:`1px solid ${T.border}`, borderRadius:999, background:"transparent", fontSize:13, fontWeight:600, color:T.text2, cursor:"pointer", fontFamily:"inherit" }}>↺ Reset flow</button>
+          <button onClick={()=>{ go("accounts"); setAccountState("new-user"); setRisk("tight"); setLinkedOverlay("none"); setLinkedIncomeStatus("unconfirmed"); setNeedsReconciliation(false); setCarriedManualObligations(0); setIsJointAccount(false); setJointShare(null); setSimulateJoint(false); setSimulateLowHistory(false); setPaycheckSignal("detected"); setHasRoarMoney(false); }} style={{ height:40, border:`1px solid ${T.border}`, borderRadius:999, background:"transparent", fontSize:13, fontWeight:600, color:T.text2, cursor:"pointer", fontFamily:"inherit" }}>↺ Reset flow</button>
 
           <p style={{ margin:0, fontSize:10, color:T.text3, lineHeight:"15px" }}>Font: DM Sans<br/>Production: Baton Turbo<br/>Tokens: MLDS 4.0</p>
         </div>
@@ -2217,14 +2265,14 @@ export default function App() {
 
           {/* Scrollable screen content */}
           <div style={{ flex:1, overflowY:"auto", maxHeight:730 }}>
-            {screen === "accounts"        && <AccountsScreen    accountState={accountState} linkedIncomeStatus={linkedIncomeStatus} onWidgetTap={handleWidgetTap} onConnections={()=>go("connections")} />}
-            {screen === "splash"          && <SplashScreen      onClose={()=>go("accounts")} onLinkBank={()=>go("connections")} onManual={()=>go("manual-paycheck")} />}
-            {screen === "connections"     && <ConnectionsScreen accountState={accountState} linkedOverlay={linkedOverlay} linkedIncomeStatus={linkedIncomeStatus} onBack={()=>go("accounts")} onLinkBank={()=>go("link-bank")} onConfirmPaycheck={()=>go("paycheck-confirm")} onGoToCashFlow={()=>go("cashflow")} onManual={()=>go("manual-paycheck")} />}
+            {screen === "accounts"        && <AccountsScreen    accountState={accountState} linkedIncomeStatus={linkedIncomeStatus} hasRoarMoney={hasRoarMoney} onWidgetTap={handleWidgetTap} onConnections={()=>go("connections")} />}
+            {screen === "splash"          && <SplashScreen      onClose={()=>go("accounts")} onContinue={()=>go("connections")} />}
+            {screen === "connections"     && <ConnectionsScreen accountState={accountState} linkedOverlay={linkedOverlay} linkedIncomeStatus={linkedIncomeStatus} hasRoarMoney={hasRoarMoney} onBack={()=>go("accounts")} onLinkBank={()=>go("link-bank")} onConfirmPaycheck={()=>go("paycheck-confirm")} onGoToCashFlow={()=>go("cashflow")} onManual={()=>go("manual-paycheck")} />}
             {screen === "link-bank"       && <LinkBankScreen    onBack={()=>go("connections")} onSelect={handleBankSelect} />}
             {screen === "link-connecting" && <LinkConnectingScreen bank={bank ?? "Chase"} onConnected={handleConnected} />}
             {screen === "joint-account"   && <JointAccountScreen bank={bank ?? "Chase"} onConfirm={handleJointConfirm} />}
             {screen === "bill-review"     && <BillReviewScreen simulateLowHistory={simulateLowHistory} needsReconciliation={needsReconciliation} onBack={()=>go("link-connecting")} onComplete={handleBillReviewComplete} />}
-            {screen === "paycheck-confirm"&& <PaycheckConfirmScreen signal={paycheckSignal} onBack={()=>go("bill-review")} onConfirmDetected={handleIncomeDetectedConfirm} onUseManual={handleIncomeManualConfirm} onUseDirectDeposit={handleIncomeDDConfirm} />}
+            {screen === "paycheck-confirm"&& <PaycheckConfirmScreen signal={paycheckSignal} hasRoarMoney={hasRoarMoney} onBack={()=>go("bill-review")} onConfirmDetected={handleIncomeDetectedConfirm} onUseManual={handleIncomeManualConfirm} onUseDirectDeposit={handleIncomeDDConfirm} />}
             {screen === "reconciliation"  && <ReconciliationScreen onBack={()=>go("paycheck-confirm")} onComplete={handleReconciliationComplete} />}
             {screen === "cf-settings"     && <CashFlowSettingsScreen accountState={accountState} carriedManualObligations={carriedManualObligations} onBack={()=>go("cashflow")} onImproveAccuracy={()=>go("link-bank")} onReviewBills={()=>go("bill-review")} onManualEntries={()=>go("reconciliation")} onConnections={()=>go("connections")} />}
             {screen === "manual-paycheck" && <ManualPaycheckScreen onBack={()=>go("splash")} onContinue={()=>go("manual-bills")} />}
