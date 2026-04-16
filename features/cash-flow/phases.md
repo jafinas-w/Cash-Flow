@@ -1,7 +1,7 @@
 # Cash Flow — Build Phases
 
 > **Purpose:** Working reference for design and build order. Update status markers as each phase completes.
-> **Last updated:** April 9, 2026 (Phases 1–7 complete + Confidence/Paycheck patch)
+> **Last updated:** April 16, 2026 (Phases 1–8 complete + Confidence/Paycheck patch)
 > **Owner:** Jaf Inas / PFM Team
 
 ---
@@ -417,7 +417,91 @@ All decisions below are confirmed. No further alignment needed before building.
 
 ---
 
-## Phase 8 — Polish, Edge Cases, and Iteration 🟡 ⬜
+## Phase 8 — Connections Hub (Cash Flow Setup) 🟡 ✅
+
+**Why this phase:** The existing onboarding flow dropped users directly into individual downstream screens (link bank → bill review → paycheck confirm → CF) without a durable place to understand their current data coverage, see their confidence score, or know what to do next. New users had no overview; returning users had no easy way back into the setup journey. This phase adds a persistent hub that serves both audiences.
+
+**Goal:** A reusable "Cash Flow Setup" screen that shows the user's current data strength, what we can see vs. guess, and what action to take next — accessible for first-time users and returners alike.
+
+**Estimated effort:** 1 session
+
+### What was built
+
+**New screen: `"connections"`**
+- Header: "Cash Flow" nav title + "SET UP" breadcrumb with 3-dot animated progress indicator (fills as setup deepens: empty → partial → partial+ → full)
+- Heading switches by state: "Build your Cash Flow picture" (new-user) / "Add where bills and spend hit" (returning)
+- Supporting copy tied to outcomes, not generic data-grab framing
+
+**Confidence module**
+- Numeric score `/100` derived from existing `confidenceBadge` logic — no new scoring model
+- Score mapping added: `CONF_SCORE` record (`High = 92`, `Medium = 58`, `Partial view = 45`, `Manual = 35`, `Still learning = 25`, `Getting started = 0`, `Unreliable = 10`)
+- Animated progress bar (teal/yellow/red based on score range)
+- Tier badge reuses existing `CONF_COLOR` / `CONF_BG` tokens
+- 1-line contextual "next step" hint adapts to every state
+
+**Connected accounts section**
+- State-aware account list:
+  - RoarMoney: shown for all non-manual, non-new-user states; badge = `PAYCHECK PATTERN` (RoarMoney-only) or `DIRECT DEPOSIT` (DD path) or `INCOME DETECTED` (bv-linked)
+  - Chase checking: shown for `bv-linked` state with `INCOME DETECTED` badge
+  - Manual profile: shown for `manual-only` with `MANUAL DATA` badge
+  - Empty state copy for new users
+- "LINK ANOTHER ACCOUNT" suggestion rows (Chase, Bank of America with "TYPICAL NEXT STEP" label) when no external link exists
+
+**What we can see vs guess section**
+- Two items: Income & payday timing / Bills, subs & everyday spend
+- Teal filled checkmark = seen, yellow `~` = partial/estimated, empty circle = guessing
+- Copy for each item adapts to state (confirmed, partial, guessing)
+
+**Contextual CTAs (one primary per state)**
+
+| State | Primary CTA |
+|---|---|
+| New-user | "Link my bank account →" (teal) + "Enter my info manually" (text) |
+| Manual / RoarMoney / RoarMoney+DD | "Link another account →" (black) |
+| BV-linked, income unconfirmed | "Link another account →" (black) + "Confirm my paycheck →" (outline) |
+| BV-linked, income confirmed | "Link another account →" + "View my Cash Flow →" |
+| Reconnect needed | "Reconnect Chase →" (red) |
+
+**Routing**
+
+| Touch point | Before | After |
+|---|---|---|
+| New-user taps Cash Flow widget | went to `connections` directly | now goes to `splash` first (feature intro) |
+| Splash primary CTA | "Connect my bank →" → `link-bank` | "Continue →" → `connections` |
+| Confidence badge chip on CF screen | non-interactive label | tappable button — routes to `connections` |
+| AccountsScreen (all returning states) | No hub entry | "Cash Flow Setup" row added below the CF widget |
+| CF Settings screen | "Improve your accuracy" only | "Connections" row added as first entry |
+
+**Post-initial iteration (same session)**
+- Splash CTA label changed from "Connect my bank →" to "Continue →" and re-routed to `connections` instead of `link-bank`. Splash now serves as the feature intro/value prop; `connections` is the true setup entry point where users choose to link or enter manually.
+- Confidence badge chip on `CashFlowScreen` is now an interactive button. Tapping it navigates to the Connections hub, giving users a direct path to improve their score mid-flow without navigating through Settings.
+
+### States demoed via controls panel
+
+All 7 states reachable by combining "Widget / profile state" + "Linked state overlay" chips:
+- New-user empty
+- Manual-only
+- RoarMoney-only (partial)
+- RoarMoney + Plaid DD
+- BV-linked medium (income unconfirmed)
+- BV-linked high (income confirmed — set via paycheck-confirm flow)
+- Reconnect needed
+
+### Dependencies
+- Phases 1–7 complete ✅
+- Uses existing `accountState`, `linkedOverlay`, `linkedIncomeStatus` — no new state added
+
+### Success criteria ✅
+- Every state shows exactly one primary action ✅
+- "What we can see vs guess" updates correctly for all account states ✅
+- Confidence score and progress bar reflect the same label logic as `CashFlowScreen` ✅
+- First-time new users see splash first, then land on `connections` via "Continue →"; returning users via Accounts row and CF Settings ✅
+- Confidence badge chip on CF screen is tappable and routes to connections hub ✅
+- No dead ends — every state has a back route to Accounts ✅
+
+---
+
+## Final Phase — Polish, Edge Cases, and Iteration 🟡 ⬜
 
 **Why last:** Everything must be stable before polish is applied. Edge cases are found by walking through a complete, working prototype.
 
@@ -478,18 +562,19 @@ gate             reconciliation                   states + settings
 
                          ↓
 
-                      Phase 8
-                 ────────────────────────────
-                 Polish, edge cases,
-                 accessibility, metrics
+                      Phase 8                     Final Phase
+                 ────────────────────────         ────────────────────────
+                 Connections Hub                  Polish, edge cases,
+                 (Cash Flow Setup screen)         accessibility, metrics
 
 ```
 
 **Phases 2 and 3** are built together — same component, same session.
 **Phase 6** is intentionally last among new screens — highest complexity, novel UX pattern, depends on Phase 5.
+**Phase 8** slots after Phase 7 — depends on all account states and CF screen being stable before the hub is built on top.
 **No phase should start until the one before it is marked ✅.**
 
 ---
 
-*Last updated: April 9, 2026*
+*Last updated: April 16, 2026*
 *Source: Design sessions with [Jaf Inas / PFM Team] — Cash Flow v1*

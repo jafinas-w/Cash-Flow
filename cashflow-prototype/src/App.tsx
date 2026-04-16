@@ -25,7 +25,7 @@ const T = {
    TYPES
 ═══════════════════════════════════════════════════════════════════ */
 type Screen =
-  | "accounts" | "splash"
+  | "accounts" | "splash" | "connections"
   | "link-bank" | "link-connecting" | "joint-account" | "bill-review" | "paycheck-confirm" | "reconciliation"
   | "cf-settings"
   | "manual-paycheck" | "manual-bills"
@@ -151,6 +151,7 @@ const STATUS_COLOR: Record<RiskLevel, string> = { ahead:T.tealDark,       tight:
 const STATUS_BG:    Record<RiskLevel, string> = { ahead:T.bgAccent,       tight:T.bgWarning,         short:T.bgNegative            };
 const CONF_COLOR:   Record<Confidence,string> = { "High confidence":T.tealDark, "Medium confidence":T.yellow, "Low confidence":T.red, "Manual estimate":T.yellow, "Still learning":T.yellow, "Unreliable":T.red, "Partial view":T.yellow };
 const CONF_BG:      Record<Confidence,string> = { "High confidence":T.bgAccent, "Medium confidence":T.bgWarning, "Low confidence":T.bgNegative, "Manual estimate":T.bgWarning, "Still learning":T.bgWarning, "Unreliable":T.bgNegative, "Partial view":T.bgWarning };
+const CONF_SCORE:   Record<string, number>    = { "Getting started":0, "Manual estimate":35, "Partial view":45, "Still learning":25, "Medium confidence":58, "High confidence":92, "Low confidence":20, "Unreliable":10 };
 
 /* ═══════════════════════════════════════════════════════════════════
    HELPERS
@@ -340,9 +341,9 @@ function CashFlowWidget({
 }
 
 function AccountsScreen({
-  accountState, linkedIncomeStatus, onWidgetTap,
+  accountState, linkedIncomeStatus, onWidgetTap, onConnections,
 }: {
-  accountState:AccountState; linkedIncomeStatus:LinkedIncomeStatus; onWidgetTap:()=>void;
+  accountState:AccountState; linkedIncomeStatus:LinkedIncomeStatus; onWidgetTap:()=>void; onConnections:()=>void;
 }) {
   const totalBalance = totalBalanceFor(accountState);
   const showsRoarMoney = accountState !== "new-user" && accountState !== "manual-only";
@@ -415,6 +416,16 @@ function AccountsScreen({
         )}
 
         <CashFlowWidget accountState={accountState} linkedIncomeStatus={linkedIncomeStatus} onTap={onWidgetTap} />
+
+        {accountState !== "new-user" && (
+          <button onClick={onConnections} style={{ background:T.bgCard, border:`1px solid ${T.border}`, borderRadius:14, padding:"12px 16px", display:"flex", justifyContent:"space-between", alignItems:"center", cursor:"pointer", width:"100%", fontFamily:"inherit", textAlign:"left" }}>
+            <div>
+              <p style={{ margin:0, fontSize:14, fontWeight:600 }}>Cash Flow Setup</p>
+              <p style={{ margin:"2px 0 0", fontSize:12, color:T.text3 }}>Check your confidence score and link more accounts</p>
+            </div>
+            <span style={{ color:T.text3, fontSize:18 }}>›</span>
+          </button>
+        )}
         <div style={{ background:T.bgCard, borderRadius:20, padding:20, border:`1px solid ${T.border}`, opacity:0.45 }}>
           <div style={{ display:"flex", justifyContent:"space-between", marginBottom:10 }}>
             <span style={{ fontSize:16, fontWeight:600 }}>Spending</span>
@@ -488,7 +499,7 @@ function SplashScreen({ onClose, onLinkBank, onManual }: { onClose:()=>void; onL
             </div>
             <Badge label="Recommended" color={T.tealDark} bg={T.bgAccent} />
           </div>
-          <PrimaryBtn label="Connect my bank →" onClick={onLinkBank} bg={T.tealBright} />
+          <PrimaryBtn label="Continue →" onClick={onLinkBank} bg={T.tealBright} />
         </div>
 
         <div style={{ textAlign:"center" }}>
@@ -1268,7 +1279,7 @@ function JointAccountScreen({ bank, onConfirm }: { bank: string; onConfirm: (sha
    SCREEN 5A — CASH FLOW SETTINGS (PHASE 7)
 ═══════════════════════════════════════════════════════════════════ */
 function CashFlowSettingsScreen({
-  accountState, carriedManualObligations, onBack, onImproveAccuracy, onReviewBills, onManualEntries,
+  accountState, carriedManualObligations, onBack, onImproveAccuracy, onReviewBills, onManualEntries, onConnections,
 }: {
   accountState: AccountState;
   carriedManualObligations: number;
@@ -1276,6 +1287,7 @@ function CashFlowSettingsScreen({
   onImproveAccuracy: () => void;
   onReviewBills: () => void;
   onManualEntries: () => void;
+  onConnections: () => void;
 }) {
   const isLinked = accountState === "bv-linked";
   const canImproveAccuracy = accountState === "manual-only" || accountState === "roarmoney-only" || accountState === "roarmoney-dd";
@@ -1290,6 +1302,16 @@ function CashFlowSettingsScreen({
     <div>
       <NavBar title="Cash Flow settings" onBack={onBack} />
       <div style={{ padding:"4px 16px 28px", display:"grid", gap:12 }}>
+        <div style={rowStyle}>
+          <div>
+            <p style={{ margin:0, fontSize:14, fontWeight:600 }}>Connections</p>
+            <p style={{ margin:"2px 0 0", fontSize:12, color:T.text3 }}>Confidence score and linked accounts</p>
+          </div>
+          <button onClick={onConnections} style={{ height:34, border:`1px solid ${T.tealDark}`, borderRadius:999, background:"transparent", color:T.tealDark, fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"inherit", padding:"0 12px" }}>
+            Open
+          </button>
+        </div>
+
         <div style={rowStyle}>
           <div>
             <p style={{ margin:0, fontSize:14, fontWeight:600 }}>Improve your accuracy</p>
@@ -1398,10 +1420,10 @@ function LinkBankPrompt({ accountState, onLinkBank }: { accountState: AccountSta
 }
 
 function CashFlowScreen({
-  accountState, risk, linkedOverlay, linkedIncomeStatus, carriedManualObligations, isJointAccount, jointShare, onBack, onLinkBank, onOpenSettings,
+  accountState, risk, linkedOverlay, linkedIncomeStatus, carriedManualObligations, isJointAccount, jointShare, onBack, onLinkBank, onOpenSettings, onOpenConnections,
 }: {
   accountState:AccountState; risk:RiskLevel; linkedOverlay:LinkedOverlay; linkedIncomeStatus:LinkedIncomeStatus;
-  carriedManualObligations:number; isJointAccount:boolean; jointShare:number|null; onBack:()=>void; onLinkBank:()=>void; onOpenSettings:()=>void;
+  carriedManualObligations:number; isJointAccount:boolean; jointShare:number|null; onBack:()=>void; onLinkBank:()=>void; onOpenSettings:()=>void; onOpenConnections:()=>void;
 }) {
   const profile =
     accountState === "manual-only" ? "manual"
@@ -1468,7 +1490,13 @@ function CashFlowScreen({
         <div style={{ background:T.bgCard, border:`1px solid ${isReconnect ? T.redBorder : T.border}`, borderRadius:20, padding:20, display:"grid", gap:16 }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:8, flexWrap:"wrap" }}>
             <Badge label={STATUS_COPY[risk]}  color={STATUS_COLOR[risk]}  bg={STATUS_BG[risk]}  />
-            <Badge label={confidenceBadge}    color={CONF_COLOR[confidenceBadge]} bg={CONF_BG[confidenceBadge]} />
+            <button
+              onClick={onOpenConnections}
+              title="Tap to improve your Cash Flow confidence"
+              style={{ background:"none", border:"none", padding:0, cursor:"pointer", fontFamily:"inherit" }}
+            >
+              <Badge label={confidenceBadge} color={CONF_COLOR[confidenceBadge]} bg={CONF_BG[confidenceBadge]} />
+            </button>
           </div>
           <div>
             <p style={{ margin:0, fontSize:11, color:T.text3, fontWeight:600, letterSpacing:"0.5px" }}>
@@ -1717,11 +1745,296 @@ function CashFlowScreen({
 }
 
 /* ═══════════════════════════════════════════════════════════════════
+   SCREEN — CONNECTIONS HUB (Cash Flow Setup)
+═══════════════════════════════════════════════════════════════════ */
+function ConnectionsScreen({
+  accountState, linkedOverlay, linkedIncomeStatus,
+  onBack, onLinkBank, onConfirmPaycheck, onGoToCashFlow, onManual,
+}: {
+  accountState: AccountState;
+  linkedOverlay: LinkedOverlay;
+  linkedIncomeStatus: LinkedIncomeStatus;
+  onBack: () => void;
+  onLinkBank: () => void;
+  onConfirmPaycheck: () => void;
+  onGoToCashFlow: () => void;
+  onManual: () => void;
+}) {
+  const isNewUser     = accountState === "new-user";
+  const isManual      = accountState === "manual-only";
+  const isRoarOnly    = accountState === "roarmoney-only";
+  const isRoarDD      = accountState === "roarmoney-dd";
+  const isLinked      = accountState === "bv-linked";
+  const isReconnect   = linkedOverlay === "reconnect";
+  const isStillLearning = linkedOverlay === "still-learning";
+  const incomeConfirmed = linkedIncomeStatus === "confirmed" || linkedIncomeStatus === "dd";
+
+  // Derive confidence label matching CashFlowScreen logic exactly
+  const confidenceLabel: string =
+    isNewUser       ? "Getting started"
+    : isReconnect   ? "Unreliable"
+    : isStillLearning ? "Still learning"
+    : (isRoarOnly || isRoarDD) ? "Partial view"
+    : isLinked && incomeConfirmed ? "High confidence"
+    : isLinked      ? "Medium confidence"
+    : "Manual estimate";
+
+  const score     = CONF_SCORE[confidenceLabel] ?? 0;
+  const confColor = CONF_COLOR[confidenceLabel as Confidence] ?? T.text3;
+  const confBg    = CONF_BG[confidenceLabel as Confidence]    ?? T.bgPage;
+
+  // Setup step progress (0 = none, 1 = partial, 2 = partial+, 3 = full)
+  const setupStep =
+    isNewUser                               ? 0
+    : isManual || isRoarOnly                ? 1
+    : isRoarDD || (isLinked && !incomeConfirmed) ? 2
+    : 3;
+
+  // Next action hint copy
+  const nextAction: string =
+    isNewUser       ? "Link your bank or enter your info to get started."
+    : isReconnect   ? "Reconnect your account to restore accuracy."
+    : isStillLearning ? "Keep using MoneyLion — your patterns sharpen over the next few weeks."
+    : isLinked && !incomeConfirmed ? "Confirm your paycheck to reach High confidence."
+    : isRoarDD      ? "Link your external spending accounts for a fuller picture."
+    : isRoarOnly    ? "Link your main spending account for a fuller picture."
+    : isManual      ? "Link your bank for a real-time view that updates automatically."
+    : "Your Cash Flow picture is complete.";
+
+  // Coverage signal states
+  const incomeSeen    = isRoarDD || (isLinked && incomeConfirmed);
+  const incomePartial = isRoarOnly || isManual || (isLinked && !incomeConfirmed);
+  const billsSeen     = isLinked;
+  const billsPartial  = isManual;
+
+  // Bar color based on score
+  const barColor = isReconnect ? T.red : score >= 80 ? T.tealBright : score >= 50 ? T.yellow : "#CE293F";
+
+  return (
+    <div>
+      {/* Nav + breadcrumb */}
+      <NavBar title="Cash Flow" onBack={onBack} right={<div style={{ width:44 }} />} />
+      <div style={{ padding:"2px 20px 6px", display:"flex", alignItems:"center", gap:8 }}>
+        <span style={{ fontSize:11, fontWeight:600, color:T.text3, letterSpacing:"0.5px" }}>SET UP</span>
+        <div style={{ display:"flex", gap:4, alignItems:"center" }}>
+          {[0,1,2].map(i => (
+            <div key={i} style={{ width: i < setupStep ? 14 : 6, height:4, borderRadius:999, background: i < setupStep ? T.tealDark : T.border, transition:"all 300ms ease" }} />
+          ))}
+        </div>
+      </div>
+
+      <div style={{ padding:"4px 16px 32px", display:"grid", gap:12 }}>
+
+        {/* Hero heading */}
+        <div style={{ padding:"4px 0 0" }}>
+          <h1 style={{ margin:0, fontSize:22, fontWeight:600, lineHeight:"30px", letterSpacing:"-0.5px" }}>
+            {isNewUser ? "Build your Cash Flow picture" : "Add where bills and spend hit"}
+          </h1>
+          <p style={{ margin:"6px 0 0", fontSize:14, color:T.text2, lineHeight:"20px" }}>
+            {isNewUser
+              ? "The more you connect, the more accurate your number. Start with your bank or enter info manually."
+              : "We already see income in RoarMoney. Link where rent, cards, and everyday spend debit to lift confidence further."}
+          </p>
+        </div>
+
+        {/* Reconnect alert banner */}
+        {isReconnect && (
+          <div style={{ background:T.bgNegative, border:`1.5px solid #FFADB8`, borderRadius:16, padding:"12px 14px", display:"flex", gap:10 }}>
+            <span style={{ fontSize:16 }}>⚠️</span>
+            <div>
+              <p style={{ margin:0, fontSize:13, fontWeight:600, color:T.red }}>Chase connection needs attention</p>
+              <p style={{ margin:"3px 0 0", fontSize:12, color:T.text2, lineHeight:"17px" }}>Your number may be unreliable. Re-authorize to restore accuracy.</p>
+            </div>
+          </div>
+        )}
+
+        {/* Confidence module */}
+        <div style={{ background:T.bgCard, border:`1px solid ${isReconnect ? "#FFADB8" : T.border}`, borderRadius:20, padding:20, display:"grid", gap:0 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+            <div>
+              <p style={{ margin:0, fontSize:11, fontWeight:600, color:T.text3, letterSpacing:"0.5px" }}>CASH FLOW CONFIDENCE</p>
+              {isNewUser ? (
+                <p style={{ margin:"6px 0 0", fontSize:34, fontWeight:600, color:"#CCC", letterSpacing:-1 }}>—</p>
+              ) : (
+                <div style={{ display:"flex", alignItems:"baseline", gap:3, marginTop:6 }}>
+                  <span style={{ fontSize:36, fontWeight:600, letterSpacing:-1, color: isReconnect ? T.red : T.text1 }}>{score}</span>
+                  <span style={{ fontSize:15, fontWeight:600, color:T.text3 }}>/100</span>
+                </div>
+              )}
+            </div>
+            <Badge label={confidenceLabel} color={confColor} bg={confBg} />
+          </div>
+          {!isNewUser && (
+            <div style={{ marginTop:12 }}>
+              <div style={{ height:6, borderRadius:999, background:"#EEE", overflow:"hidden" }}>
+                <div style={{ width:`${score}%`, height:"100%", background:barColor, borderRadius:999, transition:"width 600ms ease" }} />
+              </div>
+            </div>
+          )}
+          <p style={{ margin:"10px 0 0", fontSize:12, color:T.text2, lineHeight:"17px" }}>{nextAction}</p>
+        </div>
+
+        {/* Connected accounts */}
+        <div style={{ background:T.bgCard, border:`1px solid ${T.border}`, borderRadius:20, padding:20, display:"grid", gap:0 }}>
+          <p style={{ margin:"0 0 12px", fontSize:11, fontWeight:600, color:T.text3, letterSpacing:"0.5px" }}>CONNECTED ACCOUNTS</p>
+
+          {isNewUser && (
+            <div style={{ padding:"8px 0 12px", textAlign:"center" }}>
+              <p style={{ margin:0, fontSize:13, color:T.text3 }}>No accounts connected yet</p>
+            </div>
+          )}
+
+          {(isRoarOnly || isRoarDD || isLinked) && (
+            <div style={{ display:"flex", alignItems:"center", gap:12, padding:"8px 0", borderBottom:`1px solid ${T.border}` }}>
+              <div style={{ width:40, height:40, borderRadius:12, background:T.bgAccent, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:18 }}>🦁</div>
+              <div style={{ flex:1 }}>
+                <p style={{ margin:0, fontSize:14, fontWeight:600 }}>RoarMoney checking</p>
+                <p style={{ margin:"2px 0 0", fontSize:11, color:T.text3 }}>•••• 4821</p>
+                <span style={{ display:"inline-block", marginTop:3, fontSize:10, fontWeight:600, color:T.tealDark, background:T.bgAccent, borderRadius:999, padding:"2px 8px", letterSpacing:"0.3px" }}>
+                  {isRoarDD ? "DIRECT DEPOSIT" : "PAYCHECK PATTERN"}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {isManual && (
+            <div style={{ display:"flex", alignItems:"center", gap:12, padding:"8px 0", borderBottom:`1px solid ${T.border}` }}>
+              <div style={{ width:40, height:40, borderRadius:12, background:T.bgWarning, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:18 }}>✏️</div>
+              <div style={{ flex:1 }}>
+                <p style={{ margin:0, fontSize:14, fontWeight:600 }}>Manual profile</p>
+                <p style={{ margin:"2px 0 0", fontSize:11, color:T.text3 }}>Paycheck + bills entered</p>
+                <span style={{ display:"inline-block", marginTop:3, fontSize:10, fontWeight:600, color:T.yellow, background:T.bgWarning, borderRadius:999, padding:"2px 8px", letterSpacing:"0.3px" }}>MANUAL DATA</span>
+              </div>
+            </div>
+          )}
+
+          {isLinked && (
+            <div style={{ display:"flex", alignItems:"center", gap:12, padding:"8px 0 4px" }}>
+              <div style={{ width:40, height:40, borderRadius:12, background:"#003087", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:13, fontWeight:700, color:"#FFF" }}>CH</div>
+              <div style={{ flex:1 }}>
+                <p style={{ margin:0, fontSize:14, fontWeight:600 }}>Chase checking</p>
+                <p style={{ margin:"2px 0 0", fontSize:11, color:T.text3 }}>•••• 8801</p>
+                <span style={{ display:"inline-block", marginTop:3, fontSize:10, fontWeight:600, color:T.tealDark, background:T.bgAccent, borderRadius:999, padding:"2px 8px", letterSpacing:"0.3px" }}>INCOME DETECTED</span>
+              </div>
+            </div>
+          )}
+
+          {/* Suggested next accounts to link */}
+          {!isLinked && (
+            <>
+              <p style={{ margin:"14px 0 10px", fontSize:11, fontWeight:600, color:T.text3, letterSpacing:"0.5px" }}>LINK ANOTHER ACCOUNT</p>
+              {[
+                { name:"Chase",         sub:"Where many users pay cards & rent", color:"#003087", initials:"C" },
+                { name:"Bank of America", sub:"Major checking and spending hub",  color:"#E31837", initials:"BA" },
+              ].map(b => (
+                <button key={b.name} onClick={onLinkBank} style={{ display:"flex", alignItems:"center", gap:12, background:"none", border:"none", cursor:"pointer", padding:"8px 0", textAlign:"left", width:"100%", fontFamily:"inherit" }}>
+                  <div style={{ width:36, height:36, borderRadius:10, background:b.color, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, color:"#FFF", fontSize:11, fontWeight:700 }}>{b.initials}</div>
+                  <div style={{ flex:1 }}>
+                    <p style={{ margin:0, fontSize:13, fontWeight:600 }}>{b.name}</p>
+                    <p style={{ margin:"1px 0 2px", fontSize:11, color:T.text3 }}>{b.sub}</p>
+                    <span style={{ fontSize:10, fontWeight:600, color:T.tealDark, letterSpacing:"0.3px" }}>TYPICAL NEXT STEP</span>
+                  </div>
+                  <span style={{ color:T.text3, fontSize:16 }}>›</span>
+                </button>
+              ))}
+            </>
+          )}
+        </div>
+
+        {/* What we can see vs guess */}
+        <div style={{ background:T.bgCard, border:`1px solid ${T.border}`, borderRadius:20, padding:20, display:"grid", gap:12 }}>
+          <p style={{ margin:0, fontSize:11, fontWeight:600, color:T.text3, letterSpacing:"0.5px" }}>WHAT WE CAN SEE VS GUESS</p>
+
+          {/* Income & payday timing */}
+          <div style={{ display:"flex", alignItems:"flex-start", gap:12 }}>
+            <div style={{ width:22, height:22, borderRadius:999, border:`2px solid ${incomeSeen ? T.tealDark : incomePartial ? T.yellow : "#CCC"}`, background: incomeSeen ? T.tealDark : "transparent", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, marginTop:1 }}>
+              {incomeSeen && <span style={{ color:"#FFF", fontSize:11, fontWeight:700 }}>✓</span>}
+              {incomePartial && !incomeSeen && <span style={{ color:T.yellow, fontSize:13, fontWeight:700, lineHeight:1 }}>~</span>}
+            </div>
+            <div>
+              <p style={{ margin:0, fontSize:14, fontWeight:600 }}>Income & payday timing</p>
+              <p style={{ margin:"3px 0 0", fontSize:12, color:T.text2, lineHeight:"17px" }}>
+                {incomeSeen
+                  ? `${linkedIncomeStatus === "dd" ? "Direct deposit confirmed" : "Regular inflows into RoarMoney"} — we can anchor your pay period.`
+                  : incomePartial
+                  ? isManual
+                    ? "Based on what you entered. Link your bank for automatic detection."
+                    : "Regular inflows detected. Confirm your paycheck amount to lock this in."
+                  : "If rent or paycheck hits another account, we may under-count income until you link it."}
+              </p>
+            </div>
+          </div>
+
+          <div style={{ height:1, background:T.border }} />
+
+          {/* Bills, subs, everyday spend */}
+          <div style={{ display:"flex", alignItems:"flex-start", gap:12 }}>
+            <div style={{ width:22, height:22, borderRadius:999, border:`2px solid ${billsSeen ? T.tealDark : billsPartial ? T.yellow : "#CCC"}`, background: billsSeen ? T.tealDark : "transparent", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, marginTop:1 }}>
+              {billsSeen && <span style={{ color:"#FFF", fontSize:11, fontWeight:700 }}>✓</span>}
+              {billsPartial && !billsSeen && <span style={{ color:T.yellow, fontSize:13, fontWeight:700, lineHeight:1 }}>~</span>}
+            </div>
+            <div>
+              <p style={{ margin:0, fontSize:14, fontWeight:600 }}>Bills, subs & everyday spend</p>
+              <p style={{ margin:"3px 0 0", fontSize:12, color:T.text2, lineHeight:"17px" }}>
+                {billsSeen
+                  ? "Recurring charges detected across your accounts. Confirmed in bill review."
+                  : billsPartial
+                  ? "Based on bills you entered. Link your bank to detect charges automatically."
+                  : "If rent or cards pull from another bank, we may under-count commitments until you link it."}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Action buttons */}
+        <div style={{ display:"grid", gap:10 }}>
+          {isReconnect && (
+            <button style={{ width:"100%", height:52, border:"none", borderRadius:999, background:T.red, color:"#FFF", fontWeight:600, fontSize:15, cursor:"pointer", fontFamily:"inherit" }}>
+              Reconnect Chase →
+            </button>
+          )}
+          {!isNewUser && !isReconnect && (
+            <button onClick={onLinkBank} style={{ width:"100%", height:52, border:"none", borderRadius:999, background:T.text1, color:"#FFF", fontWeight:600, fontSize:15, cursor:"pointer", fontFamily:"inherit" }}>
+              Link another account →
+            </button>
+          )}
+          {!isNewUser && isLinked && !incomeConfirmed && !isReconnect && (
+            <button onClick={onConfirmPaycheck} style={{ width:"100%", height:48, border:`1.5px solid ${T.tealDark}`, borderRadius:999, background:"transparent", color:T.tealDark, fontWeight:600, fontSize:14, cursor:"pointer", fontFamily:"inherit" }}>
+              Confirm my paycheck →
+            </button>
+          )}
+          {isNewUser && (
+            <>
+              <button onClick={onLinkBank} style={{ width:"100%", height:52, border:"none", borderRadius:999, background:T.tealBright, color:T.text1, fontWeight:600, fontSize:15, cursor:"pointer", fontFamily:"inherit" }}>
+                Link my bank account →
+              </button>
+              <button onClick={onManual} style={{ width:"100%", height:44, border:"none", borderRadius:999, background:"none", color:T.text2, fontWeight:600, fontSize:14, cursor:"pointer", fontFamily:"inherit", textDecoration:"underline", textDecorationColor:T.border }}>
+                Enter my info manually
+              </button>
+            </>
+          )}
+          {!isNewUser && (
+            <button onClick={onGoToCashFlow} style={{ height:44, background:"none", border:"none", color:T.tealDark, fontWeight:600, fontSize:14, cursor:"pointer", fontFamily:"inherit" }}>
+              View my Cash Flow →
+            </button>
+          )}
+        </div>
+
+        <p style={{ margin:0, fontSize:11, color:T.text3, lineHeight:"16px", textAlign:"center" }}>
+          Connections are powered by Plaid. MoneyLion never stores your bank credentials.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
    APP — NAVIGATION + FRAME
 ═══════════════════════════════════════════════════════════════════ */
 const SCREEN_LABELS: Record<Screen, string> = {
   "accounts":         "Accounts page",
   "splash":           "Feature intro",
+  "connections":      "Connections hub",
   "link-bank":        "Link bank",
   "link-connecting":  "Connecting",
   "joint-account":    "Joint account",
@@ -1904,18 +2217,19 @@ export default function App() {
 
           {/* Scrollable screen content */}
           <div style={{ flex:1, overflowY:"auto", maxHeight:730 }}>
-            {screen === "accounts"        && <AccountsScreen    accountState={accountState} linkedIncomeStatus={linkedIncomeStatus} onWidgetTap={handleWidgetTap} />}
-            {screen === "splash"          && <SplashScreen      onClose={()=>go("accounts")} onLinkBank={()=>go("link-bank")} onManual={()=>go("manual-paycheck")} />}
-            {screen === "link-bank"       && <LinkBankScreen    onBack={()=>go("splash")}    onSelect={handleBankSelect} />}
+            {screen === "accounts"        && <AccountsScreen    accountState={accountState} linkedIncomeStatus={linkedIncomeStatus} onWidgetTap={handleWidgetTap} onConnections={()=>go("connections")} />}
+            {screen === "splash"          && <SplashScreen      onClose={()=>go("accounts")} onLinkBank={()=>go("connections")} onManual={()=>go("manual-paycheck")} />}
+            {screen === "connections"     && <ConnectionsScreen accountState={accountState} linkedOverlay={linkedOverlay} linkedIncomeStatus={linkedIncomeStatus} onBack={()=>go("accounts")} onLinkBank={()=>go("link-bank")} onConfirmPaycheck={()=>go("paycheck-confirm")} onGoToCashFlow={()=>go("cashflow")} onManual={()=>go("manual-paycheck")} />}
+            {screen === "link-bank"       && <LinkBankScreen    onBack={()=>go("connections")} onSelect={handleBankSelect} />}
             {screen === "link-connecting" && <LinkConnectingScreen bank={bank ?? "Chase"} onConnected={handleConnected} />}
             {screen === "joint-account"   && <JointAccountScreen bank={bank ?? "Chase"} onConfirm={handleJointConfirm} />}
             {screen === "bill-review"     && <BillReviewScreen simulateLowHistory={simulateLowHistory} needsReconciliation={needsReconciliation} onBack={()=>go("link-connecting")} onComplete={handleBillReviewComplete} />}
             {screen === "paycheck-confirm"&& <PaycheckConfirmScreen signal={paycheckSignal} onBack={()=>go("bill-review")} onConfirmDetected={handleIncomeDetectedConfirm} onUseManual={handleIncomeManualConfirm} onUseDirectDeposit={handleIncomeDDConfirm} />}
             {screen === "reconciliation"  && <ReconciliationScreen onBack={()=>go("paycheck-confirm")} onComplete={handleReconciliationComplete} />}
-            {screen === "cf-settings"     && <CashFlowSettingsScreen accountState={accountState} carriedManualObligations={carriedManualObligations} onBack={()=>go("cashflow")} onImproveAccuracy={()=>go("link-bank")} onReviewBills={()=>go("bill-review")} onManualEntries={()=>go("reconciliation")} />}
+            {screen === "cf-settings"     && <CashFlowSettingsScreen accountState={accountState} carriedManualObligations={carriedManualObligations} onBack={()=>go("cashflow")} onImproveAccuracy={()=>go("link-bank")} onReviewBills={()=>go("bill-review")} onManualEntries={()=>go("reconciliation")} onConnections={()=>go("connections")} />}
             {screen === "manual-paycheck" && <ManualPaycheckScreen onBack={()=>go("splash")} onContinue={()=>go("manual-bills")} />}
             {screen === "manual-bills"    && <ManualBillsScreen  onBack={()=>go("manual-paycheck")} onDone={handleManualDone} />}
-            {screen === "cashflow"        && <CashFlowScreen     accountState={accountState} risk={risk} linkedOverlay={linkedOverlay} linkedIncomeStatus={linkedIncomeStatus} carriedManualObligations={carriedManualObligations} isJointAccount={isJointAccount} jointShare={jointShare} onBack={()=>go("accounts")} onLinkBank={()=>go("link-bank")} onOpenSettings={()=>go("cf-settings")} />}
+            {screen === "cashflow"        && <CashFlowScreen     accountState={accountState} risk={risk} linkedOverlay={linkedOverlay} linkedIncomeStatus={linkedIncomeStatus} carriedManualObligations={carriedManualObligations} isJointAccount={isJointAccount} jointShare={jointShare} onBack={()=>go("accounts")} onLinkBank={()=>go("link-bank")} onOpenSettings={()=>go("cf-settings")} onOpenConnections={()=>go("connections")} />}
           </div>
 
           {/* Home indicator */}
