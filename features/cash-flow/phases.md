@@ -640,6 +640,235 @@ All 7 states reachable by combining "Widget / profile state" + "Linked state ove
 
 ---
 
+## Phase 11 — Confidence Tier Recalibration 🟡 ✅ *(documentation stub)*
+
+**Why this phase:** Phase 10 mapped both `confirmed` and `dd` income states to "High confidence," which overstated the accuracy of bank-verified-only income. BV detection is pattern-based and can miss edge cases; DD provides deterministic paycheck timing and amount. Compressing both into the same tier weakened the incentive to set up DD and misled users about their picture.
+
+**Goal:** Introduce a "Good confidence" tier between Medium and High, reserving "High confidence" exclusively for DD. Rewire every confidence consumer to the new map.
+
+**What shipped (in code)**
+- Added `"Good confidence"` to the `Confidence` type
+- `CONF_SCORE` map: Good confidence = 72, High confidence = 92
+- `CONF_COLOR` / `CONF_BG`: Good confidence reuses teal-dark / teal-100 (accent-positive)
+- Badge logic updated in `CashFlowWidget`, `CashFlowScreen`, `ConnectionsScreen`
+- Copy updated so "full-confidence" language is reserved for DD only
+
+**Success criteria ✅**
+- [x] BV-linked + confirmed income (no DD) = Good confidence, not High
+- [x] RM + DD (no BV link) = High confidence
+- [x] BV-linked + DD = High confidence
+- [x] Unconfirmed bank-detected = Medium confidence
+- [x] Scoring stays on the same 0-100 scale, with 72 / 92 anchors
+
+---
+
+## Phase 12 — Cash / Gig Income Support 🟡 ✅ *(documentation stub)*
+
+**Why this phase:** A meaningful segment of MoneyLion's stretched-household users are paid fully or partially in cash (gig workers, service workers, side hustles, lower-income tiers). Forcing them through "Paycheck amount" + "Next pay date" misrepresents their reality and produces wrong Cash Flow math. Detecting income in their bank account is impossible because the money never touches the bank until they deposit it.
+
+**Goal:** Give cash-earners a first-class entry path, distinct UI treatment on the Connections hub, and a meaningful upgrade path (deposit cash into RoarMoney → build a transaction trail → eventually raise confidence).
+
+**What shipped (in code)**
+- `ManualPaycheckScreen` adds an income type selector: `"regular" | "cash" | "gig"`
+- Cash / gig flow captures amount + steadiness instead of payday + frequency
+- New `handleManualCashContinue` handler (Phase 13a refactors it to push a `cash-gig` `IncomeSource`)
+- `ConnectionsScreen` renders a distinct "cash income" row when the user is on the cash path
+- Next-action hint copy differentiates: non-RM cash users get a "keep estimate accurate" nudge; RM cash users get a soft "deposit cash into RoarMoney" upgrade nudge
+
+**Success criteria ✅**
+- [x] Manual paycheck screen surfaces the income type selector
+- [x] Cash / gig path skips `Next pay date` and asks about steadiness instead
+- [x] Connections hub income row shows distinct copy for cash users
+- [x] Confidence ceiling for cash-only users stays at "Manual estimate" in Phase 12 (Phase 14+ may revisit once deposit trail exists)
+
+---
+
+## Phase 13a — Income Data Model Refactor (invisible) 🟡 ✅
+
+**Why this phase:** The entire income system was keyed off a single `LinkedIncomeStatus` enum (`"unconfirmed" | "confirmed" | "manual" | "dd" | "cash"`). This forced every user to have exactly one income source, collapsed DD + cash into a single state, and blocked the natural next request: *"I have DD AND a cash side hustle — show both."* Every consumer also had to duplicate the same chain of string comparisons (`status === "confirmed" || status === "dd"`), which was brittle and easy to get wrong.
+
+**Goal:** Swap the single-enum model for an `IncomeSource[]` array without changing a single visible pixel. This is a pure plumbing change so Phase 13b can build the multi-source UI on top of a stable foundation.
+
+**Estimated effort:** 1 session
+
+### What was built
+
+**New types (`cashflow-prototype/src/App.tsx`)**
+```ts
+type IncomeKind   = "bank-detected" | "manual" | "dd" | "cash-gig";
+type IncomeStatus = "confirmed" | "unconfirmed";
+interface IncomeSource {
+  id: string;
+  kind: IncomeKind;
+  label: string;
+  amount: number;
+  frequency: PayFreq;
+  status: IncomeStatus;
+  steadiness?: "steady" | "variable" | "highly-variable";
+}
+```
+
+**Central derived helper**
+```ts
+function getIncomeHelpers(incomes: IncomeSource[]): IncomeHelpers
+// returns: hasDD, hasConfirmedBank, hasUnconfirmedBank, hasManual, hasCash, anyIncome, incomeConfirmed
+```
+Every consumer calls `getIncomeHelpers(incomes)` once and reads booleans. No component touches the raw array yet — that's Phase 13b.
+
+**State swap**
+- Removed: `const [linkedIncomeStatus, setLinkedIncomeStatus] = useState<LinkedIncomeStatus>("unconfirmed")`
+- Added: `const [incomes, setIncomes] = useState<IncomeSource[]>([])`
+- Removed the `LinkedIncomeStatus` type entirely
+
+**Handlers rewritten to push `IncomeSource` objects**
+
+| Handler | Old behavior | New behavior |
+|---|---|---|
+| `handleConnected` | `setLinkedIncomeStatus("unconfirmed")` | Removes any prior `bank-detected`, pushes fresh `{ kind: "bank-detected", status: "unconfirmed", amount: 1400, frequency: "biweekly" }` |
+| `handleIncomeDetectedConfirm` | `setLinkedIncomeStatus("confirmed")` | Flips the existing `bank-detected` + `unconfirmed` source to `status: "confirmed"` |
+| `handleIncomeManualConfirm` | `setLinkedIncomeStatus("manual")` | Removes `bank-detected` + any prior `manual`, pushes fresh manual source |
+| `handleIncomeDDConfirm` | `setLinkedIncomeStatus("dd")` | Removes `bank-detected` + any prior `dd`, pushes fresh `dd` source |
+| `handleManualCashContinue` | `setLinkedIncomeStatus("cash")` | Removes any prior `cash-gig`, pushes fresh `cash-gig` source with steadiness |
+| `handleManualDone` (new) | *(no-op on income)* | If no manual or cash source exists, pushes a default manual source so downstream helpers are consistent |
+
+**Reset flow**
+- `setLinkedIncomeStatus("unconfirmed")` → `setIncomes([])`
+
+**Consumers refactored (all visual output preserved)**
+- `CashFlowWidget` — confidence badge + "Safe to Spend" subtitle now keyed off `hasDD / hasConfirmedBank`
+- `CashFlowScreen` — confidence badge + "Income signal needs confirmation" banner use the helpers
+- `ConnectionsScreen` — confidence label, next-action hint, income row copy, DD upgrade card visibility all consume the helpers
+- `AccountsScreen` — passes `incomes` through to `CashFlowWidget`
+- `PaycheckConfirmScreen` — unchanged signature (handlers do the work)
+
+### Mapping: old string check → new helper
+
+| Old check | New check |
+|---|---|
+| `linkedIncomeStatus === "dd"` | `hasDD` |
+| `linkedIncomeStatus === "confirmed"` | `hasConfirmedBank` |
+| `linkedIncomeStatus === "cash"` | `hasCash` |
+| `linkedIncomeStatus === "confirmed" \|\| linkedIncomeStatus === "dd"` | `hasDD \|\| hasConfirmedBank` (bank-confirmed union) |
+| `linkedIncomeStatus !== "confirmed" && linkedIncomeStatus !== "dd"` | `!(hasDD \|\| hasConfirmedBank)` |
+| Implicit "user has some income" | `anyIncome` |
+
+### Confidence tier logic (unchanged outputs, new inputs)
+
+```ts
+isNewUser                                   → "Getting started"
+isReconnect                                 → "Unreliable"
+isStillLearning                             → "Still learning"
+isRoarOnly || isRoarDD                      → "Partial view"
+isLinked && hasDD                           → "High confidence" (92)
+isLinked && hasConfirmedBank                → "Good confidence"  (72)
+isLinked                                    → "Medium confidence"
+else                                        → "Manual estimate"
+```
+
+### Dependencies
+- Phases 1-12 complete ✅
+- No new UI, no new copy, no new states
+
+### Success criteria ✅
+- [x] `LinkedIncomeStatus` type removed from the codebase (`rg LinkedIncomeStatus src/` returns nothing)
+- [x] All consumers read from `getIncomeHelpers(incomes)` instead of enum string checks
+- [x] Handler chain still moves through `link-bank → bill-review → paycheck-confirm → connections` identically
+- [x] Reset flow clears `incomes` to `[]`
+- [x] `tsc --noEmit` introduces zero new errors (pre-existing `totalBalanceFor` / `T.borderAccent` errors remain)
+- [x] Prototype visual output is byte-for-byte identical to pre-refactor across every demo state (new-user, manual-only, RM-only, RM+DD, BV-linked at each confidence tier, cash-gig, reconnect, still-learning)
+
+### Why split this out from 13b
+The array model is a big internal change. Shipping it invisibly first means:
+1. We can validate no regressions before adding any new UI surface
+2. Phase 13b becomes a pure additive change (add cards, add buttons) on top of a known-good foundation
+3. If the data-model refactor breaks something, we can revert one phase, not two
+
+---
+
+## Phase 13b — Multi-Source UI (additive) 🟡 ✅
+
+**Why this phase:** Users have multiple income streams in real life — DD plus cash tips, two part-time paychecks, a main job plus a 1099 side hustle. Collapsing all of these into one row on the Connections hub hides the shape of someone's income and limits how accurately we can project Cash Flow. Phase 13a made the data model support this; 13b makes the UI reflect it.
+
+**Goal:** Expose the `incomes` array in the UI. Let users see every source on the Connections hub, add additional sources from the hub or from the manual flow, and edit or remove any source.
+
+### Scope decisions (locked during build)
+
+- **Single-per-kind invariant** kept for 13b MVP. The array model supports multiples; loosening this is a Phase 13c concern. `+ Add another income` hides options that would collide (no "Enter manually" when a manual source already exists).
+- **Edit enabled for `manual` + `cash-gig` only.** `dd` and `bank-detected` aren't user-editable values — they're pulled or pattern-detected. Their sheet shows a read-only explanation + a Remove action only.
+- **Remove available for every kind.** Removing bank-detected / DD is effectively a "disconnect income" action from the user's mental model.
+- **Bottom sheet pattern, stacked buttons** (MLDS Dialog 3.0 convention). Side-by-side is explicitly DO NOT USE.
+- **"Your income" card lives between the confidence module and "What we can see vs guess"**, not inside the guess card. Separation: income cards are the source-of-truth editable list; the signal dot in the guess card stays as a coarse summary.
+
+### What shipped
+
+**Connections hub: stacked income list**
+- New `YOUR INCOME` card section renders one `IncomeSourceCard` per entry in `incomes`, with a header count chip ("2 sources")
+- Each card shows icon (per-kind), label, amount + frequency + source context, and a status pill (confirmed / needs review / cash-gig / manual)
+- Tap behavior: bank-detected + unconfirmed → routes to the existing paycheck-confirm flow; all others → opens `EditIncomeSheet`
+- Below the stack: dashed `+ Add an income source` / `+ Add another income` button → opens `AddIncomeSheet`
+- Empty state: "No income added yet" with short reassurance copy
+
+**`AddIncomeSheet` (new component)**
+- Bottom sheet overlay with backdrop dismiss
+- Dynamically filters options to respect the single-per-kind invariant (hides "Enter manually" if user already has a manual source, etc.)
+- DD option:
+  - `hasRoarMoney` → enabled; tapping it calls `onAddDD` which appends a DD income source and sets accountState to `roarmoney-dd`
+  - `!hasRoarMoney` → disabled with subtitle "Requires RoarMoney" — soft-gated, visible so the path is discoverable
+- Cancel button returns without changes
+
+**`EditIncomeSheet` (new component)**
+- Bottom sheet with label, amount, and frequency inputs (`manual` + `cash-gig` only) + a destructive `Remove income source` button for all kinds
+- For `dd` + `bank-detected`: fields are hidden, replaced with a short explanation of why the value is fixed
+- Save closes the sheet and calls `onUpdateIncome(id, patch)`; Remove calls `onRemoveIncome(id)`
+
+**`ManualPaycheckScreen`: multi-entry support**
+- Accepts `incomes` + `onSaveAdditional` props
+- When `incomes.length > 0`: renders an `ALREADY ADDED (n)` summary card at the top listing saved sources
+- When additional-save is supported: renders a secondary `Save and add another` dashed button under `Continue` — saves the current form to `incomes` (replacing same-kind by invariant), resets the form, auto-flips the type selector (regular → cash or cash → regular) so the user can add the other kind without re-clicking
+
+**Per-kind copy helpers (`getIncomeLabel`, `getIncomeSubtitle`, `getIncomeIcon`, `getIncomeIconBg`)**
+
+| Kind | Label | Subtitle | Icon | Icon bg |
+|---|---|---|---|---|
+| `dd` | Direct deposit | `$X biweekly · Auto-confirmed` | 🏦 | Teal-100 |
+| `bank-detected` (confirmed) | Main paycheck | `$X biweekly · Detected from linked bank` | 📈 | Teal-100 |
+| `bank-detected` (unconfirmed) | Paycheck detected | `$X biweekly · Needs confirmation` | 📈 | Yellow-100 |
+| `manual` | Main paycheck | `$X biweekly · You entered this` | ✏️ | Yellow-100 |
+| `cash-gig` | Cash income | `~$X weekly · Cash, variable` (+ steadiness variants) | 💵 | Purple-100 |
+
+**Demo presets (new `Multi-income preset` control group)**
+- `DD + cash` — sets `hasRoarMoney=true`, `accountState=roarmoney-dd`, seeds DD ($1,600 biweekly) + cash-gig ($250 weekly, variable) and routes to the hub
+- `BV + manual side` — BV-linked main paycheck ($1,400 biweekly, confirmed) + manual side income ($600 monthly)
+- `Cash + manual` — manual W-2 ($2,200 biweekly) + cash tips ($300 weekly, steady)
+
+**State helpers restored on `App`**
+- `addIncome(src)`, `updateIncome(id, patch)`, `removeIncome(id)` — used by sheet callbacks and preset actions
+- A new inline `onAddDD` handler preserves other sources (doesn't call the legacy `handleIncomeDDConfirm` which would wipe bank-detected)
+
+### Data model mapping (unchanged from 13a)
+
+13b is pure UI: no new fields, no type changes. Reads and writes to the same `IncomeSource[]` via the 13a helpers.
+
+### Dependencies
+- Phase 13a complete ✅ (array model, helpers, handler rewrites)
+
+### Success criteria
+- [x] Connections hub renders one card per income source
+- [x] Users can add a second source from the hub without leaving the flow (via `AddIncomeSheet`)
+- [x] Users can edit or remove any source (edit for manual/cash-gig, remove for all)
+- [x] `hasDD && hasCash` state renders correctly (both cards visible, confidence still reflects DD tier = "High confidence" 92)
+- [x] Typecheck clean (`tsc --noEmit` passes with 0 errors)
+- [x] No regression in existing single-source demo states (new-user, manual-only, RoarMoney-only, RoarMoney+DD, BV-linked pre/post-confirm, cash-gig)
+- [x] New "DD + cash", "BV + manual side", "Cash + manual" demo presets jump directly to a populated hub
+
+### Known limitations / out of scope (Phase 13c candidates)
+- Single-per-kind invariant means side-hustlers can't add two cash streams or two manuals yet. Model supports it; UI does not.
+- Edit sheet for bank-detected / DD is read-only. If users want to change the detected amount, they must remove and re-add.
+- `AddIncomeSheet` DD option with `!hasRoarMoney` is disabled rather than linking into RoarMoney onboarding. Soft CTA copy present; deep link pending RoarMoney flow integration.
+- `ManualPaycheckScreen` onboarding flow still routes through bills review before returning to the hub — the hub-initiated "Enter manually" path would ideally skip bills review, but that requires threading a return-to-hub flag. Out of scope for 13b.
+
+---
+
 ## Final Phase — Polish, Edge Cases, and Iteration 🟡 ⬜
 
 **Why last:** Everything must be stable before polish is applied. Edge cases are found by walking through a complete, working prototype.
@@ -682,6 +911,60 @@ All 7 states reachable by combining "Widget / profile state" + "Linked state ove
 
 ---
 
+## Phase 13c — Cash Flow Setup Polish 🟡 ✅
+
+**Goal:** Four targeted improvements to the Connections Hub and manual income entry based on design review feedback.
+
+**Effort:** Small-medium (single session, additive, no breaking changes).
+
+**Dependency:** Phase 13b complete.
+
+### What shipped
+
+**1. One-time Cash/Gig income**
+- Extended `IncomeSource` with optional `occurrence?: "recurring" | "one-time"` and `date?: string` (backward compatible, absence = recurring)
+- `ManualPaycheckScreen` cash/gig flow gains a "Regular vs One-time" chip toggle; selecting one-time shows a date picker and hides frequency/steadiness
+- `getIncomeSubtitle` returns `$500 on Apr 20` (past) or `$500 expected Apr 25` (future) for one-time sources
+- `IncomeSourceCard` shows a `ONE-TIME` status chip in purple for one-time sources
+- `EditIncomeSheet` adapts for one-time: shows date field instead of frequency picker
+- `onContinueCash` now accepts `Omit<IncomeSource, "id">` so the screen passes through occurrence + date to App state
+
+**2. Safe-to-spend impact**
+- New `getOneTimeImpact(incomes)` helper returns `{ receivedBoost, nextOneTimePayday }`
+- `CashFlowScreen` hero: past one-time amounts added to displayed safe-to-spend; nearest future one-time date overrides next-payday copy
+
+**3. New-user gating on Connections Hub**
+- While `accountState === "new-user"`: the "+ Add an income source" button is hidden and income card taps are no-ops
+- Empty state copy updated to "Complete your initial setup to start tracking income"
+- Once `accountState !== "new-user"`, Add button and tap-to-edit behave normally
+
+**4. Card spillover fix**
+- `ConnectionsScreen` root div: `width:"100%", minWidth:0`
+- Content grid: `minWidth:0`
+- Confidence card header: left child gets `flex:1, minWidth:0`; right badge gets `flexShrink:0`
+- Your Income header: same flex/minWidth treatment
+- App scrollable content div: added `overflowX:"hidden", minWidth:0`
+
+**5. Card reorder**
+- Hub order: Confidence module, then "What we can see vs Guess", then "Your Income" (previously Income was above What we can see)
+
+### Success criteria
+- [x] One-time cash income saves with correct `occurrence` + `date` fields
+- [x] Past-date one-time income adds to safe-to-spend number; future-date shows as next expected
+- [x] Status chip shows `ONE-TIME` in purple for one-time sources
+- [x] New user cannot tap income cards or see Add button on Connections Hub
+- [x] Cards no longer spill beyond phone frame right edge
+- [x] "What we can see vs Guess" renders above "Your Income" on the hub
+- [x] `tsc` compiles clean, no new type errors introduced
+
+### Known limitations / out of scope (Phase 13d candidates)
+- Variable amounts per one-time occurrence (currently fixed amount per entry)
+- Multiple one-time events on a single IncomeSource (each is its own entry)
+- Safe-to-spend ring visualization math not updated (hero number only)
+- One-time cash income does not affect confidence score (informational for scoring)
+
+---
+
 ## Build Order Summary
 
 ```
@@ -708,6 +991,28 @@ Connections Hub          RoarMoney DD gating:       RoarMoney DD gating:
 
                                     ↓
 
+Phase 11                 Phase 12                  Phase 13a
+────────────────────     ────────────────────────  ────────────────────────
+Confidence tier          Cash / gig income         Income data model
+recalibration            support (grandma-ux)      refactor (invisible)
+(Good vs High)
+
+                                    ↓
+
+                              Phase 13b
+                         ────────────────────────
+                         Multi-source income UI
+                         (additive)
+
+                                    ↓
+
+                              Phase 13c
+                         ────────────────────────
+                         One-time income, gating,
+                         overflow fix, reorder
+
+                                    ↓
+
                               Final Phase
                          ────────────────────────
                          Polish, edge cases,
@@ -718,9 +1023,14 @@ Connections Hub          RoarMoney DD gating:       RoarMoney DD gating:
 **Phase 6** is intentionally last among new screens — highest complexity, novel UX pattern, depends on Phase 5.
 **Phase 8** slots after Phase 7 — depends on all account states and CF screen being stable before the hub is built on top.
 **Phases 9 and 10** layer RoarMoney awareness onto the existing prototype. Phase 9 is structural (state + paycheck screen); Phase 10 consumes that state in the Connections hub.
+**Phase 11** recalibrates the confidence map so DD earns its own tier above bank-detected-confirmed.
+**Phase 12** adds first-class support for cash earners — a distinct path that doesn't fake a payday.
+**Phase 13a** flips the income data model to an array in pure plumbing, zero visual change.
+**Phase 13b** exposes that array in the UI — multiple income cards, add / edit / remove.
+**Phase 13c** polishes the hub: one-time cash income, new-user gating, overflow fix, card reorder.
 **No phase should start until the one before it is marked ✅.**
 
 ---
 
-*Last updated: April 16, 2026*
+*Last updated: April 17, 2026 (Phase 13c shipped)*
 *Source: Design sessions with [Jaf Inas / PFM Team] — Cash Flow v1*

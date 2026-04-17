@@ -34,10 +34,126 @@ type Screen =
 type AccountState = "new-user" | "manual-only" | "roarmoney-only" | "roarmoney-dd" | "bv-linked";
 type RiskLevel     = "ahead" | "tight" | "short";
 type PayFreq       = "weekly" | "biweekly" | "semimonthly" | "monthly";
-type Confidence    = "High confidence" | "Medium confidence" | "Low confidence" | "Manual estimate" | "Still learning" | "Unreliable" | "Partial view";
+type Confidence    = "High confidence" | "Good confidence" | "Medium confidence" | "Low confidence" | "Manual estimate" | "Still learning" | "Unreliable" | "Partial view";
 type LinkedOverlay = "none" | "still-learning" | "reconnect" | "missing-tx";
 type PaycheckSignal = "detected" | "not-detected";
-type LinkedIncomeStatus = "unconfirmed" | "confirmed" | "manual" | "dd";
+type IncomeKind = "bank-detected" | "manual" | "dd" | "cash-gig";
+type IncomeStatus = "confirmed" | "unconfirmed";
+type IncomeOccurrence = "recurring" | "one-time";
+interface IncomeSource {
+  id: string;
+  kind: IncomeKind;
+  label: string;
+  amount: number;
+  frequency: PayFreq;
+  status: IncomeStatus;
+  steadiness?: "steady" | "variable" | "highly-variable";
+  occurrence?: IncomeOccurrence;
+  date?: string;
+}
+interface IncomeHelpers {
+  hasDD: boolean;
+  hasConfirmedBank: boolean;
+  hasUnconfirmedBank: boolean;
+  hasManual: boolean;
+  hasCash: boolean;
+  anyIncome: boolean;
+  incomeConfirmed: boolean;
+}
+function getIncomeHelpers(incomes: IncomeSource[]): IncomeHelpers {
+  const hasDD = incomes.some(i => i.kind === "dd");
+  const hasConfirmedBank = incomes.some(i => i.kind === "bank-detected" && i.status === "confirmed");
+  const hasUnconfirmedBank = incomes.some(i => i.kind === "bank-detected" && i.status === "unconfirmed");
+  const hasManual = incomes.some(i => i.kind === "manual");
+  const hasCash = incomes.some(i => i.kind === "cash-gig");
+  const anyIncome = incomes.length > 0;
+  const incomeConfirmed = hasDD || hasConfirmedBank || hasManual || hasCash;
+  return { hasDD, hasConfirmedBank, hasUnconfirmedBank, hasManual, hasCash, anyIncome, incomeConfirmed };
+}
+const uid = () => Math.random().toString(36).slice(2, 10);
+
+const FREQ_SHORT: Record<PayFreq, string> = {
+  weekly: "weekly", biweekly: "biweekly", semimonthly: "twice a month", monthly: "monthly",
+};
+
+function getIncomeLabel(src: IncomeSource): string {
+  if (src.label) return src.label;
+  switch (src.kind) {
+    case "dd": return "Direct deposit";
+    case "bank-detected": return src.status === "confirmed" ? "Main paycheck" : "Paycheck detected";
+    case "manual": return "Main paycheck";
+    case "cash-gig": return "Cash income";
+  }
+}
+function fmtShortDate(iso: string): string {
+  const d = new Date(iso + "T12:00:00");
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+function isOneTime(src: IncomeSource): boolean {
+  return src.occurrence === "one-time";
+}
+function isOneTimePast(src: IncomeSource): boolean {
+  if (!isOneTime(src) || !src.date) return false;
+  return src.date < new Date().toISOString().slice(0, 10);
+}
+
+function getIncomeSubtitle(src: IncomeSource): string {
+  const amt = `$${src.amount.toLocaleString()}`;
+  if (isOneTime(src) && src.date) {
+    return isOneTimePast(src)
+      ? `${amt} on ${fmtShortDate(src.date)}`
+      : `${amt} expected ${fmtShortDate(src.date)}`;
+  }
+  switch (src.kind) {
+    case "dd": return `${amt} ${FREQ_SHORT[src.frequency]} · Auto-confirmed`;
+    case "bank-detected":
+      return src.status === "confirmed"
+        ? `${amt} ${FREQ_SHORT[src.frequency]} · Detected from linked bank`
+        : `${amt} ${FREQ_SHORT[src.frequency]} · Needs confirmation`;
+    case "manual": return `${amt} ${FREQ_SHORT[src.frequency]} · You entered this`;
+    case "cash-gig":
+      return src.steadiness === "steady"
+        ? `~${amt} ${FREQ_SHORT[src.frequency]} · Cash, steady`
+        : src.steadiness === "highly-variable"
+        ? `~${amt} ${FREQ_SHORT[src.frequency]} · Cash, highly variable`
+        : `~${amt} ${FREQ_SHORT[src.frequency]} · Cash, variable`;
+  }
+}
+function getIncomeIcon(src: IncomeSource): string {
+  switch (src.kind) {
+    case "dd": return "🏦";
+    case "bank-detected": return "📈";
+    case "manual": return "✏️";
+    case "cash-gig": return "💵";
+  }
+}
+function getIncomeIconBg(src: IncomeSource): string {
+  switch (src.kind) {
+    case "dd": return "#E1FEFA";
+    case "bank-detected": return src.status === "confirmed" ? "#E1FEFA" : "#FFFCE9";
+    case "manual": return "#FFFCE9";
+    case "cash-gig": return "#F1E8FC";
+  }
+}
+function isIncomeEditable(src: IncomeSource): boolean {
+  return src.kind === "manual" || src.kind === "cash-gig";
+}
+function getOneTimeImpact(incomes: IncomeSource[]): { receivedBoost: number; nextOneTimePayday: string | null } {
+  const today = new Date().toISOString().slice(0, 10);
+  let receivedBoost = 0;
+  let nextOneTimePayday: string | null = null;
+  for (const src of incomes) {
+    if (src.occurrence !== "one-time" || !src.date) continue;
+    if (src.date < today) {
+      receivedBoost += src.amount;
+    } else {
+      if (!nextOneTimePayday || src.date < nextOneTimePayday) {
+        nextOneTimePayday = src.date;
+      }
+    }
+  }
+  return { receivedBoost, nextOneTimePayday };
+}
 
 interface Bill { id: string; label: string; amount: string; enabled: boolean; dueDay: number }
 interface CFObligation { label: string; amount: number; date: string; pending?: boolean }
@@ -149,9 +265,9 @@ const ACCOUNT_BALANCE_DATA = {
 const STATUS_COPY:  Record<RiskLevel, string> = { ahead:"You are ahead",   tight:"Budget is tight",   short:"You may come up short" };
 const STATUS_COLOR: Record<RiskLevel, string> = { ahead:T.tealDark,       tight:T.yellow,            short:T.red                   };
 const STATUS_BG:    Record<RiskLevel, string> = { ahead:T.bgAccent,       tight:T.bgWarning,         short:T.bgNegative            };
-const CONF_COLOR:   Record<Confidence,string> = { "High confidence":T.tealDark, "Medium confidence":T.yellow, "Low confidence":T.red, "Manual estimate":T.yellow, "Still learning":T.yellow, "Unreliable":T.red, "Partial view":T.yellow };
-const CONF_BG:      Record<Confidence,string> = { "High confidence":T.bgAccent, "Medium confidence":T.bgWarning, "Low confidence":T.bgNegative, "Manual estimate":T.bgWarning, "Still learning":T.bgWarning, "Unreliable":T.bgNegative, "Partial view":T.bgWarning };
-const CONF_SCORE:   Record<string, number>    = { "Getting started":0, "Manual estimate":35, "Partial view":45, "Still learning":25, "Medium confidence":58, "High confidence":92, "Low confidence":20, "Unreliable":10 };
+const CONF_COLOR:   Record<Confidence,string> = { "High confidence":T.tealDark, "Good confidence":T.tealDark, "Medium confidence":T.yellow, "Low confidence":T.red, "Manual estimate":T.yellow, "Still learning":T.yellow, "Unreliable":T.red, "Partial view":T.yellow };
+const CONF_BG:      Record<Confidence,string> = { "High confidence":T.bgAccent, "Good confidence":T.bgAccent, "Medium confidence":T.bgWarning, "Low confidence":T.bgNegative, "Manual estimate":T.bgWarning, "Still learning":T.bgWarning, "Unreliable":T.bgNegative, "Partial view":T.bgWarning };
+const CONF_SCORE:   Record<string, number>    = { "Getting started":0, "Manual estimate":35, "Partial view":45, "Still learning":25, "Medium confidence":58, "Good confidence":72, "High confidence":92, "Low confidence":20, "Unreliable":10 };
 
 /* ═══════════════════════════════════════════════════════════════════
    HELPERS
@@ -252,10 +368,11 @@ function totalBalanceFor(state: AccountState): number | null {
    SCREEN 1 — ACCOUNTS
 ═══════════════════════════════════════════════════════════════════ */
 function CashFlowWidget({
-  accountState, linkedIncomeStatus, onTap,
+  accountState, incomes, onTap,
 }: {
-  accountState:AccountState; linkedIncomeStatus:LinkedIncomeStatus; onTap:()=>void;
+  accountState:AccountState; incomes:IncomeSource[]; onTap:()=>void;
 }) {
+  const { hasDD, hasConfirmedBank } = getIncomeHelpers(incomes);
   const card: React.CSSProperties = { width:"100%", background:T.bgCard, border:`1px solid ${T.border}`, borderRadius:20, padding:20, textAlign:"left", cursor:"pointer", display:"grid", gap:12, fontFamily:"inherit" };
   if (accountState === "new-user") return (
     <button onClick={onTap} style={card}>
@@ -320,15 +437,15 @@ function CashFlowWidget({
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
         <span style={{ fontSize:16, fontWeight:600 }}>Cash Flow</span>
         <Badge
-          label={linkedIncomeStatus === "confirmed" || linkedIncomeStatus === "dd" ? "High confidence" : "Medium confidence"}
-          color={linkedIncomeStatus === "confirmed" || linkedIncomeStatus === "dd" ? T.tealDark : T.yellow}
-          bg={linkedIncomeStatus === "confirmed" || linkedIncomeStatus === "dd" ? T.bgAccent : T.bgWarning}
+          label={hasDD ? "High confidence" : hasConfirmedBank ? "Good confidence" : "Medium confidence"}
+          color={hasDD || hasConfirmedBank ? T.tealDark : T.yellow}
+          bg={hasDD || hasConfirmedBank ? T.bgAccent : T.bgWarning}
         />
       </div>
       <p style={{ margin:0, fontSize:12, color:T.text3, fontWeight:600 }}>SAFE TO SPEND</p>
       <p style={{ margin:"-8px 0 0 0", fontSize:36, fontWeight:600, letterSpacing:-1 }}>$342</p>
       <p style={{ margin:"-4px 0 0 0", fontSize:12, color:T.text3 }}>
-        {linkedIncomeStatus === "confirmed" || linkedIncomeStatus === "dd"
+        {hasDD || hasConfirmedBank
           ? "As of 11:42 AM · Next paycheck Apr 14"
           : "Bills detected · Paycheck pending confirmation"}
       </p>
@@ -341,9 +458,9 @@ function CashFlowWidget({
 }
 
 function AccountsScreen({
-  accountState, linkedIncomeStatus, hasRoarMoney, onWidgetTap, onConnections,
+  accountState, incomes, hasRoarMoney, onWidgetTap, onConnections,
 }: {
-  accountState:AccountState; linkedIncomeStatus:LinkedIncomeStatus; hasRoarMoney:boolean; onWidgetTap:()=>void; onConnections:()=>void;
+  accountState:AccountState; incomes:IncomeSource[]; hasRoarMoney:boolean; onWidgetTap:()=>void; onConnections:()=>void;
 }) {
   const showsRoarMoney = hasRoarMoney || accountState === "roarmoney-only" || accountState === "roarmoney-dd";
   const showsExternalAccounts = accountState === "bv-linked";
@@ -423,7 +540,7 @@ function AccountsScreen({
           </>
         )}
 
-        <CashFlowWidget accountState={accountState} linkedIncomeStatus={linkedIncomeStatus} onTap={onWidgetTap} />
+        <CashFlowWidget accountState={accountState} incomes={incomes} onTap={onWidgetTap} />
 
         {accountState !== "new-user" && (
           <button onClick={onConnections} style={{ background:T.bgCard, border:`1px solid ${T.border}`, borderRadius:14, padding:"12px 16px", display:"flex", justifyContent:"space-between", alignItems:"center", cursor:"pointer", width:"100%", fontFamily:"inherit", textAlign:"left" }}>
@@ -455,7 +572,7 @@ function AccountsScreen({
 /* ═══════════════════════════════════════════════════════════════════
    SCREEN 2 — SPLASH / FEATURE INTRO
 ═══════════════════════════════════════════════════════════════════ */
-function SplashScreen({ onClose, onContinue }: { onClose:()=>void; onContinue:()=>void }) {
+function SplashScreen({ onClose, onLinkAccount, onManual }: { onClose:()=>void; onLinkAccount:()=>void; onManual:()=>void }) {
   return (
     <div>
       <div style={{ background:T.bgAccent, paddingBottom:24 }}>
@@ -499,7 +616,17 @@ function SplashScreen({ onClose, onContinue }: { onClose:()=>void; onContinue:()
           ))}
         </div>
 
-        <PrimaryBtn label="Set up my Cash Flow →" onClick={onContinue} bg={T.tealBright} />
+        <div style={{ display:"grid", gap:10 }}>
+          <PrimaryBtn label="Link my account" onClick={onLinkAccount} bg={T.tealBright} />
+          <button
+            onClick={onManual}
+            style={{
+              height:48, borderRadius:999, border:`1.5px solid ${T.border}`,
+              background:"transparent", fontSize:14, fontWeight:600, color:T.text1,
+              cursor:"pointer", fontFamily:"inherit",
+            }}
+          >Enter manually</button>
+        </div>
       </div>
     </div>
   );
@@ -574,37 +701,214 @@ function LinkConnectingScreen({ bank, onConnected }: { bank:string; onConnected:
 /* ═══════════════════════════════════════════════════════════════════
    SCREEN 4A — MANUAL: PAYCHECK
 ═══════════════════════════════════════════════════════════════════ */
-function ManualPaycheckScreen({ onBack, onContinue }: { onBack:()=>void; onContinue:()=>void }) {
+function ManualPaycheckScreen({
+  onBack, onContinue, onContinueCash, incomes = [], onSaveAdditional,
+}: {
+  onBack:()=>void; onContinue:()=>void; onContinueCash:(src: Omit<IncomeSource,"id">) => void;
+  incomes?: IncomeSource[];
+  onSaveAdditional?: (src: Omit<IncomeSource,"id">) => void;
+}) {
+  type IncomeType = "regular" | "cash" | "gig";
+  const { hasManual, hasCash } = getIncomeHelpers(incomes);
+  const initialType: IncomeType = hasManual && !hasCash ? "cash" : "regular";
+  const [incomeType, setIncomeType] = useState<IncomeType>(initialType);
   const [amount, setAmount] = useState("2800");
   const [freq, setFreq]     = useState<PayFreq>("biweekly");
   const [date, setDate]     = useState(PAY_DATES["biweekly"][0]);
+  const [cashAmount, setCashAmount] = useState("400");
+  const [steadiness, setSteadiness] = useState<"steady" | "variable" | "highly-variable">("variable");
+  const [cashOccurrence, setCashOccurrence] = useState<IncomeOccurrence>("recurring");
+  const [cashDate, setCashDate] = useState(() => new Date().toISOString().slice(0, 10));
   const onFreq = (f: PayFreq) => { setFreq(f); setDate(PAY_DATES[f][0]); };
+  const isCashOrGig = incomeType === "cash" || incomeType === "gig";
+
+  const canSaveAnother = incomes.length > 0 && !!onSaveAdditional;
+  const saveCurrentAsIncome = () => {
+    if (!onSaveAdditional) return;
+    if (isCashOrGig) {
+      const base: Omit<IncomeSource, "id"> = {
+        kind: "cash-gig", status: "confirmed", label: "Cash income",
+        amount: Number(cashAmount) || 0, frequency: "weekly",
+      };
+      if (cashOccurrence === "one-time") {
+        base.occurrence = "one-time";
+        base.date = cashDate;
+      } else {
+        base.steadiness = steadiness;
+      }
+      onSaveAdditional(base);
+    } else {
+      onSaveAdditional({ kind: "manual", status: "confirmed", label: "Main paycheck", amount: Number(amount) || 0, frequency: freq });
+    }
+    setAmount("2800"); setCashAmount("400"); setFreq("biweekly"); setDate(PAY_DATES["biweekly"][0]); setSteadiness("variable"); setCashOccurrence("recurring"); setCashDate(new Date().toISOString().slice(0, 10));
+    setIncomeType(prev => prev === "regular" ? "cash" : "regular");
+  };
+
   return (
     <div>
       <NavBar title="" onBack={onBack} />
-      <div style={{ padding:"4px 20px 28px", display:"grid", gap:24 }}>
+      <div style={{ padding:"4px 20px 28px", display:"grid", gap:20 }}>
         <div style={{ display:"grid", gap:12 }}>
           <StepBar step={1} total={2} />
-          <h1 style={{ margin:0, fontSize:22, lineHeight:"30px", fontWeight:600, letterSpacing:"-0.5px" }}>How much do you take home each paycheck?</h1>
-          <p style={{ margin:0, fontSize:14, color:T.text2 }}>After taxes and any deductions</p>
+          <h1 style={{ margin:0, fontSize:22, lineHeight:"30px", fontWeight:600, letterSpacing:"-0.5px" }}>How do you typically get paid?</h1>
+          <p style={{ margin:0, fontSize:14, color:T.text2 }}>This helps us build a more accurate Cash Flow picture.</p>
         </div>
-        <div style={{ position:"relative" }}>
-          <span style={{ position:"absolute", left:18, top:"50%", transform:"translateY(-50%)", fontSize:26, fontWeight:600, color:T.text3 }}>$</span>
-          <input type="number" value={amount} onChange={e=>setAmount(e.target.value)} style={{ width:"100%", height:76, borderRadius:18, border:`1.5px solid ${amount ? T.tealDark : T.border}`, paddingLeft:50, fontSize:30, fontWeight:600, letterSpacing:-1, background:T.bgCard, outline:"none", fontFamily:"inherit", boxSizing:"border-box", color:T.text1 }} />
-        </div>
-        <div>
-          <p style={{ margin:"0 0 10px", fontSize:14, fontWeight:600 }}>How often do you get paid?</p>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
-            {FREQ_OPTIONS.map(({ value, label }) => <Chip key={value} label={label} selected={freq===value} onClick={()=>onFreq(value)} />)}
+
+        {incomes.length > 0 && (
+          <div style={{ background:T.bgPage, border:`1px solid ${T.border}`, borderRadius:14, padding:"12px 14px", display:"grid", gap:8 }}>
+            <p style={{ margin:0, fontSize:11, fontWeight:600, color:T.text3, letterSpacing:"0.5px" }}>
+              ALREADY ADDED ({incomes.length})
+            </p>
+            {incomes.map(src => (
+              <div key={src.id} style={{ display:"flex", alignItems:"center", gap:10 }}>
+                <span style={{ fontSize:14 }}>{getIncomeIcon(src)}</span>
+                <p style={{ margin:0, fontSize:12, color:T.text2, flex:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                  <strong style={{ color:T.text1 }}>{getIncomeLabel(src)}</strong> · {getIncomeSubtitle(src)}
+                </p>
+              </div>
+            ))}
           </div>
+        )}
+
+        <div style={{ display:"grid", gap:8 }}>
+          {([
+            { key: "regular" as IncomeType, label: "Regular paycheck", sub: "Salary, hourly wages, or scheduled pay" },
+            { key: "cash" as IncomeType,    label: "Cash or tips",     sub: "Service work, tips, or cash wages" },
+            { key: "gig" as IncomeType,     label: "Gig / freelance",  sub: "Variable amounts, no fixed schedule" },
+          ]).map(opt => (
+            <button key={opt.key} onClick={() => setIncomeType(opt.key)}
+              style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 14px", borderRadius:14, border:`1.5px solid ${incomeType === opt.key ? T.tealDark : T.border}`, background: incomeType === opt.key ? T.bgAccent : T.bgCard, cursor:"pointer", textAlign:"left", fontFamily:"inherit", transition:"all 120ms ease" }}>
+              <div style={{ width:22, height:22, borderRadius:999, border:`2px solid ${incomeType === opt.key ? T.tealDark : "#CCC"}`, background: incomeType === opt.key ? T.tealDark : "transparent", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                {incomeType === opt.key && <span style={{ color:"#FFF", fontSize:11, fontWeight:700 }}>✓</span>}
+              </div>
+              <div>
+                <p style={{ margin:0, fontSize:14, fontWeight:600 }}>{opt.label}</p>
+                <p style={{ margin:"2px 0 0", fontSize:12, color:T.text2 }}>{opt.sub}</p>
+              </div>
+            </button>
+          ))}
         </div>
-        <div>
-          <p style={{ margin:"0 0 10px", fontSize:14, fontWeight:600 }}>When is your next paycheck?</p>
-          <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-            {PAY_DATES[freq].map(d => <Chip key={d} label={d} selected={date===d} onClick={()=>setDate(d)} />)}
-          </div>
-        </div>
-        <PrimaryBtn label="Continue" onClick={onContinue} />
+
+        {!isCashOrGig && (
+          <>
+            <div>
+              <p style={{ margin:"0 0 8px", fontSize:14, fontWeight:600 }}>How much do you take home each paycheck?</p>
+              <p style={{ margin:"0 0 10px", fontSize:12, color:T.text2 }}>After taxes and any deductions</p>
+              <div style={{ position:"relative" }}>
+                <span style={{ position:"absolute", left:18, top:"50%", transform:"translateY(-50%)", fontSize:26, fontWeight:600, color:T.text3 }}>$</span>
+                <input type="number" value={amount} onChange={e=>setAmount(e.target.value)} style={{ width:"100%", height:76, borderRadius:18, border:`1.5px solid ${amount ? T.tealDark : T.border}`, paddingLeft:50, fontSize:30, fontWeight:600, letterSpacing:-1, background:T.bgCard, outline:"none", fontFamily:"inherit", boxSizing:"border-box", color:T.text1 }} />
+              </div>
+            </div>
+            <div>
+              <p style={{ margin:"0 0 10px", fontSize:14, fontWeight:600 }}>How often do you get paid?</p>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                {FREQ_OPTIONS.map(({ value, label }) => <Chip key={value} label={label} selected={freq===value} onClick={()=>onFreq(value)} />)}
+              </div>
+            </div>
+            <div>
+              <p style={{ margin:"0 0 10px", fontSize:14, fontWeight:600 }}>When is your next paycheck?</p>
+              <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                {PAY_DATES[freq].map(d => <Chip key={d} label={d} selected={date===d} onClick={()=>setDate(d)} />)}
+              </div>
+            </div>
+            <PrimaryBtn label="Continue" onClick={onContinue} />
+            {canSaveAnother && (
+              <button onClick={saveCurrentAsIncome} style={{ height:44, borderRadius:999, border:`1.5px dashed ${T.border}`, background:"transparent", color:T.tealDark, fontWeight:600, fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>
+                Save and add another
+              </button>
+            )}
+          </>
+        )}
+
+        {isCashOrGig && (
+          <>
+            {/* Regular vs One-time toggle */}
+            <div>
+              <p style={{ margin:"0 0 10px", fontSize:14, fontWeight:600 }}>Is this regular or a one-time payment?</p>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                <Chip label="Regular" selected={cashOccurrence==="recurring"} onClick={()=>setCashOccurrence("recurring")} />
+                <Chip label="One-time" selected={cashOccurrence==="one-time"} onClick={()=>setCashOccurrence("one-time")} />
+              </div>
+            </div>
+
+            <div>
+              <p style={{ margin:"0 0 8px", fontSize:14, fontWeight:600 }}>
+                {cashOccurrence === "one-time" ? "How much was this payment?" : "What do you typically take home per week?"}
+              </p>
+              {cashOccurrence !== "one-time" && (
+                <p style={{ margin:"0 0 10px", fontSize:12, color:T.text2 }}>Your best estimate is fine. We will use this as a baseline.</p>
+              )}
+              <div style={{ position:"relative" }}>
+                <span style={{ position:"absolute", left:18, top:"50%", transform:"translateY(-50%)", fontSize:26, fontWeight:600, color:T.text3 }}>$</span>
+                <input type="number" value={cashAmount} onChange={e=>setCashAmount(e.target.value)} style={{ width:"100%", height:76, borderRadius:18, border:`1.5px solid ${cashAmount ? T.tealDark : T.border}`, paddingLeft:50, fontSize:30, fontWeight:600, letterSpacing:-1, background:T.bgCard, outline:"none", fontFamily:"inherit", boxSizing:"border-box", color:T.text1 }} />
+              </div>
+            </div>
+
+            {cashOccurrence === "one-time" ? (
+              <div>
+                <p style={{ margin:"0 0 10px", fontSize:14, fontWeight:600 }}>When did you receive (or expect) this?</p>
+                <input
+                  type="date"
+                  value={cashDate}
+                  onChange={e => setCashDate(e.target.value)}
+                  style={{
+                    width:"100%", height:52, borderRadius:14,
+                    border:`1.5px solid ${cashDate ? T.tealDark : T.border}`,
+                    padding:"0 16px", fontSize:15, fontWeight:600,
+                    fontFamily:"inherit", background:T.bgCard, outline:"none",
+                    boxSizing:"border-box", color:T.text1,
+                  }}
+                />
+                <p style={{ margin:"6px 0 0", fontSize:12, color:T.text2 }}>
+                  {cashDate && cashDate < new Date().toISOString().slice(0,10)
+                    ? "Past date: this will be added to your current safe-to-spend."
+                    : "Future date: this will show as your next expected income."}
+                </p>
+              </div>
+            ) : (
+              <div>
+                <p style={{ margin:"0 0 10px", fontSize:14, fontWeight:600 }}>How steady is this income?</p>
+                <div style={{ display:"grid", gap:8 }}>
+                  {([
+                    { key: "steady" as const,          label: "Very steady",       sub: "About the same every week" },
+                    { key: "variable" as const,        label: "Somewhat variable", sub: "Shifts week to week but within a range" },
+                    { key: "highly-variable" as const, label: "Highly variable",   sub: "Changes a lot depending on work" },
+                  ]).map(opt => (
+                    <button key={opt.key} onClick={() => setSteadiness(opt.key)}
+                      style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px", borderRadius:12, border:`1.5px solid ${steadiness === opt.key ? T.tealDark : T.border}`, background: steadiness === opt.key ? T.bgAccent : T.bgCard, cursor:"pointer", textAlign:"left", fontFamily:"inherit", transition:"all 120ms ease" }}>
+                      <div style={{ width:18, height:18, borderRadius:999, border:`2px solid ${steadiness === opt.key ? T.tealDark : "#CCC"}`, background: steadiness === opt.key ? T.tealDark : "transparent", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                        {steadiness === opt.key && <span style={{ color:"#FFF", fontSize:9, fontWeight:700 }}>✓</span>}
+                      </div>
+                      <div>
+                        <p style={{ margin:0, fontSize:13, fontWeight:600 }}>{opt.label}</p>
+                        <p style={{ margin:"1px 0 0", fontSize:11, color:T.text2 }}>{opt.sub}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <PrimaryBtn label="Continue" onClick={() => {
+              const base: Omit<IncomeSource, "id"> = {
+                kind: "cash-gig", status: "confirmed",
+                label: "Cash income", amount: Number(cashAmount) || 0, frequency: "weekly",
+              };
+              if (cashOccurrence === "one-time") {
+                base.occurrence = "one-time";
+                base.date = cashDate;
+              } else {
+                base.steadiness = steadiness;
+              }
+              onContinueCash(base);
+            }} />
+            {canSaveAnother && (
+              <button onClick={saveCurrentAsIncome} style={{ height:44, borderRadius:999, border:`1.5px dashed ${T.border}`, background:"transparent", color:T.tealDark, fontWeight:600, fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>
+                Save and add another
+              </button>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
@@ -1448,9 +1752,9 @@ function LinkBankPrompt({ accountState, onLinkBank }: { accountState: AccountSta
 }
 
 function CashFlowScreen({
-  accountState, risk, linkedOverlay, linkedIncomeStatus, carriedManualObligations, isJointAccount, jointShare, onBack, onLinkBank, onOpenSettings, onOpenConnections,
+  accountState, risk, linkedOverlay, incomes, carriedManualObligations, isJointAccount, jointShare, onBack, onLinkBank, onOpenSettings, onOpenConnections,
 }: {
-  accountState:AccountState; risk:RiskLevel; linkedOverlay:LinkedOverlay; linkedIncomeStatus:LinkedIncomeStatus;
+  accountState:AccountState; risk:RiskLevel; linkedOverlay:LinkedOverlay; incomes:IncomeSource[];
   carriedManualObligations:number; isJointAccount:boolean; jointShare:number|null; onBack:()=>void; onLinkBank:()=>void; onOpenSettings:()=>void; onOpenConnections:()=>void;
 }) {
   const profile =
@@ -1459,6 +1763,15 @@ function CashFlowScreen({
       : "partial";
   const m = CF[profile][risk];
   const [expanded, setExpanded] = useState(false);
+
+  const { hasDD, hasConfirmedBank } = getIncomeHelpers(incomes);
+  const incomeConfirmedBank = hasDD || hasConfirmedBank;
+
+  const oneTimeImpact = getOneTimeImpact(incomes);
+  const adjustedSafeToSpend = m.safeToSpend + oneTimeImpact.receivedBoost;
+  const displayNextPayday = oneTimeImpact.nextOneTimePayday
+    ? fmtShortDate(oneTimeImpact.nextOneTimePayday)
+    : m.nextPayday;
 
   const isLinked      = profile !== "manual";
   const isReconnect   = isLinked && linkedOverlay === "reconnect";
@@ -1469,7 +1782,8 @@ function CashFlowScreen({
     isReconnect     ? "Unreliable"
     : isStillLearning ? "Still learning"
     : profile === "partial" ? "Partial view"
-    : profile === "linked" && (linkedIncomeStatus === "confirmed" || linkedIncomeStatus === "dd") ? "High confidence"
+    : profile === "linked" && hasDD ? "High confidence"
+    : profile === "linked" && hasConfirmedBank ? "Good confidence"
     : profile === "linked" ? "Medium confidence"
     : m.confidence;
 
@@ -1531,14 +1845,14 @@ function CashFlowScreen({
               {profile === "manual" ? "EXPECTED AFTER BILLS" : isReconnect ? "LAST KNOWN VALUE" : "SAFE TO SPEND"}
             </p>
             <p style={{ margin:"4px 0 0", fontSize:52, lineHeight:"58px", letterSpacing:-2, fontWeight:600, color: risk==="short" ? T.red : isReconnect ? T.text3 : T.text1, opacity: isReconnect ? 0.6 : 1 }}>
-              {fmt(m.safeToSpend)}
+              {fmt(adjustedSafeToSpend)}
             </p>
             <p style={{ margin:"6px 0 0", fontSize:12, color:T.text3 }}>
               {profile === "manual"
-                ? `Based on your ${m.asOf} update · Next paycheck ${m.nextPayday}`
+                ? `Based on your ${m.asOf} update · Next paycheck ${displayNextPayday}`
                 : isReconnect
                 ? `Last synced ${m.asOf} — may not reflect recent activity`
-                : `As of ${m.asOf} · Next paycheck ${m.nextPayday}`}
+                : `As of ${m.asOf} · Next paycheck ${displayNextPayday}`}
             </p>
           </div>
           {profile === "manual" ? <PaycheckBar model={m} /> : <SpendBar model={m} />}
@@ -1567,7 +1881,7 @@ function CashFlowScreen({
             </div>
           )}
 
-          {profile === "linked" && linkedIncomeStatus !== "confirmed" && linkedIncomeStatus !== "dd" && !isReconnect && !isStillLearning && (
+          {profile === "linked" && !incomeConfirmedBank && !isReconnect && !isStillLearning && (
             <div style={{ background:T.bgWarning, border:`1px solid ${T.yellowBorder}`, borderRadius:12, padding:"10px 12px" }}>
               <p style={{ margin:0, fontSize:13, fontWeight:600, color:T.yellow }}>Income signal needs confirmation</p>
               <p style={{ margin:"2px 0 0", fontSize:12, color:T.text2 }}>Bills are linked, but paycheck timing or amount still needs confirmation for full-confidence Cash Flow.</p>
@@ -1765,21 +2079,328 @@ function CashFlowScreen({
 }
 
 /* ═══════════════════════════════════════════════════════════════════
+   INCOME SOURCE CARD + ADD / EDIT SHEETS (Phase 13b)
+═══════════════════════════════════════════════════════════════════ */
+function IncomeSourceCard({
+  src, onTap,
+}: {
+  src: IncomeSource; onTap: () => void;
+}) {
+  const oneTime = isOneTime(src);
+  const statusColor =
+    oneTime ? "#7517E6"
+    : src.kind === "bank-detected" && src.status === "unconfirmed" ? T.yellow
+    : src.kind === "cash-gig" ? "#7517E6"
+    : T.tealDark;
+  const statusBg =
+    oneTime ? "#F1E8FC"
+    : src.kind === "bank-detected" && src.status === "unconfirmed" ? T.bgWarning
+    : src.kind === "cash-gig" ? "#F1E8FC"
+    : T.bgAccent;
+  const statusLabel =
+    oneTime ? "One-time"
+    : src.kind === "dd" ? "Direct deposit"
+    : src.kind === "bank-detected" && src.status === "confirmed" ? "Confirmed"
+    : src.kind === "bank-detected" ? "Needs review"
+    : src.kind === "cash-gig" ? "Cash / gig"
+    : "Manual";
+
+  return (
+    <button onClick={onTap} style={{
+      display:"flex", alignItems:"center", gap:12, padding:"12px 14px",
+      background:T.bgCard, border:`1px solid ${T.border}`, borderRadius:16,
+      cursor:"pointer", width:"100%", textAlign:"left", fontFamily:"inherit",
+      transition:"background 120ms ease",
+    }}>
+      <div style={{
+        width:40, height:40, borderRadius:12, background:getIncomeIconBg(src),
+        display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:18,
+      }}>{getIncomeIcon(src)}</div>
+      <div style={{ flex:1, minWidth:0 }}>
+        <p style={{ margin:0, fontSize:14, fontWeight:600, color:T.text1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{getIncomeLabel(src)}</p>
+        <p style={{ margin:"2px 0 0", fontSize:12, color:T.text2, lineHeight:"16px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{getIncomeSubtitle(src)}</p>
+        <span style={{
+          display:"inline-block", marginTop:5, fontSize:10, fontWeight:600,
+          color:statusColor, background:statusBg, borderRadius:999, padding:"2px 8px", letterSpacing:"0.3px",
+        }}>{statusLabel.toUpperCase()}</span>
+      </div>
+      <span style={{ color:T.text3, fontSize:18, fontWeight:600 }}>›</span>
+    </button>
+  );
+}
+
+type AddIncomeAction = "link-bank" | "manual" | "cash" | "dd";
+
+function AddIncomeSheet({
+  options, hasRoarMoney, onClose, onPick,
+}: {
+  options: Array<{ action: AddIncomeAction; disabled?: boolean; disabledReason?: string }>;
+  hasRoarMoney: boolean;
+  onClose: () => void;
+  onPick: (action: AddIncomeAction) => void;
+}) {
+  const copy: Record<AddIncomeAction, { title: string; sub: string; icon: string }> = {
+    "link-bank": { title: "Link a bank account",   sub: "Auto-detect paycheck from your checking",  icon: "🔗" },
+    "manual":    { title: "Enter a paycheck",      sub: "Add a regular paycheck manually",         icon: "✏️" },
+    "cash":      { title: "Add cash or gig income", sub: "For tips, 1099, or side hustle",          icon: "💵" },
+    "dd":        { title: "Set up direct deposit", sub: hasRoarMoney ? "Send your paycheck to RoarMoney" : "Requires RoarMoney", icon: "🏦" },
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position:"absolute", inset:0, background:"rgba(0,0,0,0.48)",
+        display:"flex", alignItems:"flex-end", justifyContent:"center",
+        zIndex:50, animation:"fadeIn 180ms ease",
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width:"100%", background:T.bgCard, borderRadius:"20px 20px 0 0",
+          padding:"20px 20px 24px", display:"grid", gap:10,
+        }}
+      >
+        <div style={{ width:40, height:4, borderRadius:999, background:"#DDD", margin:"0 auto 6px" }} />
+        <p style={{ margin:"0 0 4px", fontSize:18, fontWeight:600, letterSpacing:-0.3 }}>Add another income</p>
+        <p style={{ margin:"0 0 10px", fontSize:13, color:T.text2, lineHeight:"18px" }}>Multiple income sources give you a more accurate Cash Flow picture.</p>
+
+        {options.map(opt => {
+          const c = copy[opt.action];
+          return (
+            <button
+              key={opt.action}
+              disabled={opt.disabled}
+              onClick={() => { if (!opt.disabled) onPick(opt.action); }}
+              style={{
+                display:"flex", alignItems:"center", gap:12, padding:"14px 14px",
+                background:T.bgCard, border:`1px solid ${T.border}`, borderRadius:14,
+                cursor: opt.disabled ? "not-allowed" : "pointer", width:"100%", textAlign:"left",
+                fontFamily:"inherit", opacity: opt.disabled ? 0.5 : 1,
+                transition:"background 120ms ease",
+              }}
+            >
+              <div style={{
+                width:40, height:40, borderRadius:12, background:T.bgPage,
+                display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:18,
+              }}>{c.icon}</div>
+              <div style={{ flex:1 }}>
+                <p style={{ margin:0, fontSize:14, fontWeight:600 }}>{c.title}</p>
+                <p style={{ margin:"2px 0 0", fontSize:12, color:T.text2 }}>{opt.disabled && opt.disabledReason ? opt.disabledReason : c.sub}</p>
+              </div>
+              {!opt.disabled && <span style={{ color:T.text3, fontSize:18, fontWeight:600 }}>›</span>}
+            </button>
+          );
+        })}
+
+        <button
+          onClick={onClose}
+          style={{
+            marginTop:6, height:48, borderRadius:999, border:`1px solid ${T.border}`,
+            background:"transparent", fontSize:14, fontWeight:600, color:T.text2,
+            cursor:"pointer", fontFamily:"inherit",
+          }}
+        >Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+function EditIncomeSheet({
+  src, onClose, onSave, onRemove,
+}: {
+  src: IncomeSource;
+  onClose: () => void;
+  onSave: (patch: Partial<IncomeSource>) => void;
+  onRemove: () => void;
+}) {
+  const [label, setLabel]  = useState(getIncomeLabel(src));
+  const [amount, setAmount] = useState(String(src.amount));
+  const [freq, setFreq]   = useState<PayFreq>(src.frequency);
+  const [editDate, setEditDate] = useState(src.date ?? new Date().toISOString().slice(0, 10));
+  const editable = isIncomeEditable(src);
+  const srcIsOneTime = isOneTime(src);
+
+  const canSave = editable && Number(amount) > 0 && label.trim().length > 0;
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position:"absolute", inset:0, background:"rgba(0,0,0,0.48)",
+        display:"flex", alignItems:"flex-end", justifyContent:"center",
+        zIndex:50, animation:"fadeIn 180ms ease",
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width:"100%", background:T.bgCard, borderRadius:"20px 20px 0 0",
+          padding:"20px 20px 24px", display:"grid", gap:14, maxHeight:"88%", overflowY:"auto",
+        }}
+      >
+        <div style={{ width:40, height:4, borderRadius:999, background:"#DDD", margin:"0 auto 2px" }} />
+        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+          <div style={{
+            width:44, height:44, borderRadius:12, background:getIncomeIconBg(src),
+            display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:20,
+          }}>{getIncomeIcon(src)}</div>
+          <div style={{ flex:1 }}>
+            <p style={{ margin:0, fontSize:18, fontWeight:600, letterSpacing:-0.3 }}>
+              {editable ? "Edit income" : "Income details"}
+            </p>
+            <p style={{ margin:"2px 0 0", fontSize:12, color:T.text2 }}>
+              {editable
+                ? srcIsOneTime ? "Update amount, date, or remove" : "Update amount, frequency, or remove"
+                : "Auto-synced from your connection"}
+            </p>
+          </div>
+        </div>
+
+        {editable ? (
+          <>
+            <div>
+              <p style={{ margin:"0 0 6px", fontSize:12, fontWeight:600, color:T.text2 }}>Label</p>
+              <input
+                value={label}
+                onChange={e => setLabel(e.target.value)}
+                style={{
+                  width:"100%", height:48, padding:"0 14px", fontSize:15,
+                  border:`1.5px solid ${T.border}`, borderRadius:12, outline:"none",
+                  fontFamily:"inherit",
+                }}
+              />
+            </div>
+
+            <div>
+              <p style={{ margin:"0 0 6px", fontSize:12, fontWeight:600, color:T.text2 }}>
+                {src.kind === "cash-gig" ? "Typical amount" : "Amount per paycheck"}
+              </p>
+              <div style={{ display:"flex", alignItems:"center", gap:8, height:48, padding:"0 14px", border:`1.5px solid ${T.border}`, borderRadius:12 }}>
+                <span style={{ fontSize:15, color:T.text3 }}>$</span>
+                <input
+                  inputMode="decimal"
+                  value={amount}
+                  onChange={e => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
+                  style={{
+                    flex:1, border:"none", outline:"none", fontSize:15, fontFamily:"inherit", background:"transparent",
+                  }}
+                />
+              </div>
+            </div>
+
+            {srcIsOneTime ? (
+              <div>
+                <p style={{ margin:"0 0 6px", fontSize:12, fontWeight:600, color:T.text2 }}>Date</p>
+                <input
+                  type="date"
+                  value={editDate}
+                  onChange={e => setEditDate(e.target.value)}
+                  style={{
+                    width:"100%", height:48, borderRadius:12,
+                    border:`1.5px solid ${T.border}`, padding:"0 14px",
+                    fontSize:15, fontFamily:"inherit", background:T.bgCard, outline:"none",
+                    boxSizing:"border-box", color:T.text1,
+                  }}
+                />
+                <p style={{ margin:"4px 0 0", fontSize:11, color:T.text2 }}>
+                  {editDate < new Date().toISOString().slice(0,10) ? "Past: counts toward safe-to-spend" : "Future: shows as upcoming income"}
+                </p>
+              </div>
+            ) : (
+              <div>
+                <p style={{ margin:"0 0 6px", fontSize:12, fontWeight:600, color:T.text2 }}>Frequency</p>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:6 }}>
+                  {FREQ_OPTIONS.map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setFreq(opt.value)}
+                      style={{
+                        height:40, borderRadius:999, fontSize:13, fontWeight:600,
+                        border:`1.5px solid ${freq === opt.value ? T.tealDark : T.border}`,
+                        background: freq === opt.value ? T.bgAccent : T.bgCard,
+                        color: freq === opt.value ? T.tealDark : T.text2,
+                        cursor:"pointer", fontFamily:"inherit",
+                      }}
+                    >{opt.label}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <div style={{ padding:"14px 16px", background:T.bgPage, borderRadius:12 }}>
+            <p style={{ margin:0, fontSize:13, color:T.text2, lineHeight:"18px" }}>
+              {src.kind === "dd" && "This income is auto-confirmed through your direct deposit rails. To edit the amount, update your paycheck with your employer."}
+              {src.kind === "bank-detected" && "This income is detected from your linked bank account. To change it, re-link or pick a different source in Cash Flow settings."}
+            </p>
+          </div>
+        )}
+
+        {editable && (
+          <button
+            disabled={!canSave}
+            onClick={() => {
+              const patch: Partial<IncomeSource> = {
+                label: label.trim(),
+                amount: Number(amount),
+                frequency: freq,
+              };
+              if (srcIsOneTime) patch.date = editDate;
+              onSave(patch);
+              onClose();
+            }}
+            style={{
+              height:48, borderRadius:999, border:"none",
+              background: canSave ? T.tealBright : "#CCC",
+              color:T.text1, fontSize:15, fontWeight:600,
+              cursor: canSave ? "pointer" : "not-allowed", fontFamily:"inherit",
+            }}
+          >Save changes</button>
+        )}
+
+        <button
+          onClick={() => { onRemove(); onClose(); }}
+          style={{
+            height:48, borderRadius:999, border:`1.5px solid ${T.redBorder}`,
+            background:"transparent", color:T.red, fontSize:14, fontWeight:600,
+            cursor:"pointer", fontFamily:"inherit",
+          }}
+        >Remove income source</button>
+
+        <button
+          onClick={onClose}
+          style={{
+            height:44, borderRadius:999, border:"none",
+            background:"transparent", color:T.text2, fontSize:13, fontWeight:600,
+            cursor:"pointer", fontFamily:"inherit",
+          }}
+        >Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
    SCREEN — CONNECTIONS HUB (Cash Flow Setup)
 ═══════════════════════════════════════════════════════════════════ */
 function ConnectionsScreen({
-  accountState, linkedOverlay, linkedIncomeStatus, hasRoarMoney,
+  accountState, linkedOverlay, incomes, hasRoarMoney,
   onBack, onLinkBank, onConfirmPaycheck, onGoToCashFlow, onManual,
+  onOpenAddSheet, onOpenEditSheet,
 }: {
   accountState: AccountState;
   linkedOverlay: LinkedOverlay;
-  linkedIncomeStatus: LinkedIncomeStatus;
+  incomes: IncomeSource[];
   hasRoarMoney: boolean;
   onBack: () => void;
   onLinkBank: () => void;
   onConfirmPaycheck: () => void;
   onGoToCashFlow: () => void;
   onManual: () => void;
+  onOpenAddSheet: () => void;
+  onOpenEditSheet: (src: IncomeSource) => void;
 }) {
   const isNewUser     = accountState === "new-user";
   const isManual      = accountState === "manual-only";
@@ -1788,15 +2409,17 @@ function ConnectionsScreen({
   const isLinked      = accountState === "bv-linked";
   const isReconnect   = linkedOverlay === "reconnect";
   const isStillLearning = linkedOverlay === "still-learning";
-  const incomeConfirmed = linkedIncomeStatus === "confirmed" || linkedIncomeStatus === "dd";
+  const { hasDD, hasConfirmedBank, hasCash } = getIncomeHelpers(incomes);
+  const incomeConfirmed = hasDD || hasConfirmedBank;
 
-  // Derive confidence label matching CashFlowScreen logic exactly
+  // Derive confidence label
   const confidenceLabel: string =
     isNewUser       ? "Getting started"
     : isReconnect   ? "Unreliable"
     : isStillLearning ? "Still learning"
     : (isRoarOnly || isRoarDD) ? "Partial view"
-    : isLinked && incomeConfirmed ? "High confidence"
+    : isLinked && hasDD ? "High confidence"
+    : isLinked && hasConfirmedBank ? "Good confidence"
     : isLinked      ? "Medium confidence"
     : "Manual estimate";
 
@@ -1816,10 +2439,20 @@ function ConnectionsScreen({
     isNewUser       ? "Link your bank or enter your info to get started."
     : isReconnect   ? "Reconnect your account to restore accuracy."
     : isStillLearning ? "Keep using MoneyLion — your patterns sharpen over the next few weeks."
-    : isLinked && !incomeConfirmed ? "Confirm your paycheck to reach High confidence."
+    : isLinked && !incomeConfirmed ? "Confirm your paycheck to improve your confidence score."
     : isRoarDD      ? "Link your external spending accounts for a fuller picture."
     : isRoarOnly    ? "Link your main spending account for a fuller picture."
+    : isManual && hasCash && hasRoarMoney
+      ? "Deposit your cash into RoarMoney to build a transaction trail over time."
+    : isManual && hasCash
+      ? "Update your income estimate when things change to keep your forecast accurate."
     : isManual      ? "Link your bank for a real-time view that updates automatically."
+    : isLinked && incomeConfirmed && hasRoarMoney && !hasDD
+      ? "Set up direct deposit to reach High confidence and get paid early."
+    : isLinked && hasDD
+      ? "Your Cash Flow picture is complete."
+    : isLinked && incomeConfirmed
+      ? "Your Cash Flow picture looks good. Direct deposit unlocks the highest accuracy."
     : "Your Cash Flow picture is complete.";
 
   // Coverage signal states
@@ -1832,7 +2465,7 @@ function ConnectionsScreen({
   const barColor = isReconnect ? T.red : score >= 80 ? T.tealBright : score >= 50 ? T.yellow : "#CE293F";
 
   return (
-    <div>
+    <div style={{ width:"100%", minWidth:0, overflow:"hidden" }}>
       {/* Nav + breadcrumb */}
       <NavBar title="Cash Flow" onBack={onBack} right={<div style={{ width:44 }} />} />
       <div style={{ padding:"2px 20px 6px", display:"flex", alignItems:"center", gap:8 }}>
@@ -1844,7 +2477,7 @@ function ConnectionsScreen({
         </div>
       </div>
 
-      <div style={{ padding:"4px 16px 32px", display:"grid", gap:12 }}>
+      <div style={{ padding:"4px 16px 32px", display:"grid", gap:12, minWidth:0, overflow:"hidden" }}>
 
         {/* Hero heading */}
         <div style={{ padding:"4px 0 0" }}>
@@ -1866,8 +2499,8 @@ function ConnectionsScreen({
 
         {/* Confidence module */}
         <div style={{ background:T.bgCard, border:`1px solid ${isReconnect ? "#FFADB8" : T.border}`, borderRadius:20, padding:20, display:"grid", gap:0 }}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
-            <div>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", minWidth:0 }}>
+            <div style={{ flex:1, minWidth:0 }}>
               <p style={{ margin:0, fontSize:11, fontWeight:600, color:T.text3, letterSpacing:"0.5px" }}>CASH FLOW CONFIDENCE</p>
               {isNewUser ? (
                 <p style={{ margin:"6px 0 0", fontSize:34, fontWeight:600, color:"#CCC", letterSpacing:-1 }}>—</p>
@@ -1878,7 +2511,9 @@ function ConnectionsScreen({
                 </div>
               )}
             </div>
-            <Badge label={confidenceLabel} color={confColor} bg={confBg} />
+            <div style={{ flexShrink:0 }}>
+              <Badge label={confidenceLabel} color={confColor} bg={confBg} />
+            </div>
           </div>
           {!isNewUser && (
             <div style={{ marginTop:12 }}>
@@ -1904,6 +2539,15 @@ function ConnectionsScreen({
               <p style={{ margin:0, fontSize:14, fontWeight:600 }}>Income & payday timing</p>
               {isNewUser ? (
                 <p style={{ margin:"3px 0 0", fontSize:12, color:T.text3, lineHeight:"17px" }}>No income data yet</p>
+              ) : isManual && hasCash ? (
+                <>
+                  <p style={{ margin:"3px 0 0", fontSize:13, fontWeight:600, color:T.text1 }}>~$400/week, cash income</p>
+                  <p style={{ margin:"2px 0 0", fontSize:12, color:T.text2, lineHeight:"17px" }}>
+                    {hasRoarMoney
+                      ? "Based on your estimate. Deposit cash into RoarMoney to build a transaction trail over time."
+                      : "Based on your estimate. Update this when your income changes."}
+                  </p>
+                </>
               ) : isManual ? (
                 <>
                   <p style={{ margin:"3px 0 0", fontSize:13, fontWeight:600, color:T.text1 }}>$2,800 biweekly</p>
@@ -1919,14 +2563,20 @@ function ConnectionsScreen({
               ) : isLinked && incomeConfirmed ? (
                 <>
                   <p style={{ margin:"3px 0 0", fontSize:13, fontWeight:600, color:T.tealDark }}>
-                    {linkedIncomeStatus === "dd" ? "Direct deposit confirmed" : "$1,400 biweekly, confirmed"}
+                    {hasDD ? "Direct deposit confirmed" : "$1,400 biweekly, confirmed"}
                   </p>
-                  <p style={{ margin:"2px 0 0", fontSize:12, color:T.text2, lineHeight:"17px" }}>We can anchor your pay period accurately.</p>
+                  <p style={{ margin:"2px 0 0", fontSize:12, color:T.text2, lineHeight:"17px" }}>
+                    {hasDD
+                      ? "We can anchor your pay period accurately."
+                      : hasRoarMoney
+                      ? "Get exact payday amounts with direct deposit."
+                      : "Detected from your linked bank account."}
+                  </p>
                 </>
               ) : isLinked ? (
                 <>
                   <p style={{ margin:"3px 0 0", fontSize:13, fontWeight:600, color:T.yellow }}>$1,400 detected biweekly</p>
-                  <p style={{ margin:"2px 0 0", fontSize:12, color:T.text2, lineHeight:"17px" }}>Needs confirmation. Confirm your paycheck to reach High confidence.</p>
+                  <p style={{ margin:"2px 0 0", fontSize:12, color:T.text2, lineHeight:"17px" }}>Needs confirmation. Confirm your paycheck to improve your score.</p>
                 </>
               ) : null}
             </div>
@@ -1960,6 +2610,76 @@ function ConnectionsScreen({
             </div>
           </div>
         </div>
+
+        {/* ───── YOUR INCOME (Phase 13b, reordered Phase 13c) ───── */}
+        <div style={{ background:T.bgCard, border:`1px solid ${T.border}`, borderRadius:20, padding:20, display:"grid", gap:12 }}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", minWidth:0 }}>
+            <p style={{ margin:0, fontSize:11, fontWeight:600, color:T.text3, letterSpacing:"0.5px", flex:1, minWidth:0 }}>YOUR INCOME</p>
+            {incomes.length > 0 && (
+              <span style={{ fontSize:11, fontWeight:600, color:T.text3, flexShrink:0 }}>
+                {incomes.length} {incomes.length === 1 ? "source" : "sources"}
+              </span>
+            )}
+          </div>
+
+          {incomes.length === 0 ? (
+            <div style={{ padding:"16px 4px", textAlign:"center" }}>
+              <p style={{ margin:0, fontSize:14, fontWeight:600, color:T.text1 }}>No income added yet</p>
+              <p style={{ margin:"4px 0 0", fontSize:12, color:T.text2, lineHeight:"17px" }}>
+                {isNewUser
+                  ? "Complete your initial setup to start tracking income."
+                  : "Link a bank, enter a paycheck, or add cash income to start building your Cash Flow picture."}
+              </p>
+            </div>
+          ) : (
+            <div style={{ display:"grid", gap:10 }}>
+              {incomes.map(src => (
+                <IncomeSourceCard
+                  key={src.id}
+                  src={src}
+                  onTap={isNewUser ? () => {} : () => {
+                    if (src.kind === "bank-detected" && src.status === "unconfirmed") {
+                      onConfirmPaycheck();
+                    } else {
+                      onOpenEditSheet(src);
+                    }
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
+          {!isNewUser && (
+            <button
+              onClick={onOpenAddSheet}
+              style={{
+                height:44, borderRadius:999, border:`1.5px dashed ${T.border}`,
+                background:"transparent", fontSize:13, fontWeight:600, color:T.tealDark,
+                cursor:"pointer", fontFamily:"inherit", marginTop:2,
+              }}
+            >
+              + Add {incomes.length === 0 ? "an income source" : "another income"}
+            </button>
+          )}
+        </div>
+
+        {/* DD upgrade card — RM users who haven't set up DD */}
+        {hasRoarMoney && !hasDD && !isNewUser && (
+          <div style={{ background:T.bgAccent, border:`1px solid #B2FCF1`, borderRadius:16, padding:"14px 16px", display:"flex", gap:12, alignItems:"flex-start" }}>
+            <div style={{ width:36, height:36, borderRadius:10, background:T.tealDark, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+              <span style={{ color:"#FFF", fontSize:16 }}>↓</span>
+            </div>
+            <div style={{ flex:1 }}>
+              <p style={{ margin:0, fontSize:14, fontWeight:600 }}>Get paid up to 2 days early</p>
+              <p style={{ margin:"4px 0 0", fontSize:12, color:T.text2, lineHeight:"17px" }}>
+                Set up direct deposit into RoarMoney for the strongest Cash Flow confidence and early paycheck access.
+              </p>
+              <button style={{ marginTop:10, height:34, padding:"0 16px", borderRadius:999, border:`1.5px solid ${T.tealDark}`, background:"transparent", color:T.tealDark, fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+                Set up direct deposit
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Connected accounts */}
         <div style={{ background:T.bgCard, border:`1px solid ${T.border}`, borderRadius:20, padding:20, display:"grid", gap:0 }}>
@@ -2066,6 +2786,7 @@ function ConnectionsScreen({
           Connections are powered by Plaid. MoneyLion never stores your bank credentials.
         </p>
       </div>
+
     </div>
   );
 }
@@ -2095,7 +2816,19 @@ export default function App() {
   const [risk,    setRisk]    = useState<RiskLevel>("tight");
   const [linkedOverlay, setLinkedOverlay] = useState<LinkedOverlay>("none");
   const [bank,    setBank]    = useState<string | null>(null);
-  const [linkedIncomeStatus, setLinkedIncomeStatus] = useState<LinkedIncomeStatus>("unconfirmed");
+  const [incomes, setIncomes] = useState<IncomeSource[]>([]);
+  const addIncome = (src: Omit<IncomeSource, "id"> & { id?: string }) => {
+    setIncomes(prev => [...prev, { id: src.id ?? uid(), ...src }]);
+  };
+  const updateIncome = (id: string, patch: Partial<IncomeSource>) => {
+    setIncomes(prev => prev.map(i => i.id === id ? { ...i, ...patch } : i));
+  };
+  const removeIncome = (id: string) => {
+    setIncomes(prev => prev.filter(i => i.id !== id));
+  };
+  const [addSheetOpen, setAddSheetOpen] = useState(false);
+  const [editingIncome, setEditingIncome] = useState<IncomeSource | null>(null);
+
   const [needsReconciliation, setNeedsReconciliation] = useState(false);
   const [carriedManualObligations, setCarriedManualObligations] = useState(0);
   const [isJointAccount, setIsJointAccount] = useState(false);
@@ -2121,7 +2854,13 @@ export default function App() {
   const handleConnected = () => {
     const wasManualUser = accountState === "manual-only";
     setAccountState("bv-linked");
-    setLinkedIncomeStatus("unconfirmed");
+    setIncomes(prev => {
+      const withoutBank = prev.filter(i => i.kind !== "bank-detected");
+      return [
+        ...withoutBank,
+        { id: uid(), kind: "bank-detected", status: "unconfirmed", label: "Paycheck detected", amount: 1400, frequency: "biweekly" },
+      ];
+    });
     setNeedsReconciliation(wasManualUser);
     setCarriedManualObligations(0);
     if (simulateJoint) go("joint-account");
@@ -2145,17 +2884,33 @@ export default function App() {
   };
 
   const handleIncomeDetectedConfirm = () => {
-    setLinkedIncomeStatus("confirmed");
+    setIncomes(prev => prev.map(i =>
+      i.kind === "bank-detected" && i.status === "unconfirmed"
+        ? { ...i, status: "confirmed", label: "Main paycheck" }
+        : i
+    ));
     continueAfterIncome();
   };
 
   const handleIncomeManualConfirm = () => {
-    setLinkedIncomeStatus("manual");
+    setIncomes(prev => {
+      const withoutBankOrManual = prev.filter(i => i.kind !== "bank-detected" && i.kind !== "manual");
+      return [
+        ...withoutBankOrManual,
+        { id: uid(), kind: "manual", status: "confirmed", label: "Main paycheck", amount: 1400, frequency: "biweekly" },
+      ];
+    });
     continueAfterIncome();
   };
 
   const handleIncomeDDConfirm = () => {
-    setLinkedIncomeStatus("dd");
+    setIncomes(prev => {
+      const withoutBankOrDD = prev.filter(i => i.kind !== "bank-detected" && i.kind !== "dd");
+      return [
+        ...withoutBankOrDD,
+        { id: uid(), kind: "dd", status: "confirmed", label: "Direct deposit", amount: 1400, frequency: "biweekly" },
+      ];
+    });
     continueAfterIncome();
   };
 
@@ -2165,7 +2920,24 @@ export default function App() {
     go("connections");
   };
 
-  const handleManualDone = () => { setAccountState("manual-only"); go("connections"); };
+  const handleManualDone = () => {
+    setAccountState("manual-only");
+    setIncomes(prev => {
+      if (prev.some(i => i.kind === "manual" || i.kind === "cash-gig")) return prev;
+      return [
+        ...prev,
+        { id: uid(), kind: "manual", status: "confirmed", label: "Main paycheck", amount: 2800, frequency: "biweekly" },
+      ];
+    });
+    go("connections");
+  };
+  const handleManualCashContinue = (src: Omit<IncomeSource, "id">) => {
+    setIncomes(prev => {
+      const withoutCash = prev.filter(i => i.kind !== "cash-gig");
+      return [...withoutCash, { id: uid(), ...src }];
+    });
+    go("manual-bills");
+  };
 
   return (
     <>
@@ -2241,6 +3013,49 @@ export default function App() {
           </div>
 
           <div>
+            <p style={{ margin:"0 0 8px", fontSize:10, fontWeight:600, color:T.text3, textTransform:"uppercase", letterSpacing:"0.6px" }}>Multi-income preset</p>
+            <p style={{ margin:"0 0 8px", fontSize:10, color:T.text3, lineHeight:"14px" }}>Quickly stack two sources to preview the hub.</p>
+            <div style={{ display:"grid", gap:6 }}>
+              <Chip label="DD + cash" selected={false} onClick={() => {
+                setHasRoarMoney(true);
+                setAccountState("roarmoney-dd");
+                setIncomes([
+                  { id: uid(), kind: "dd",       status: "confirmed", label: "Direct deposit", amount: 1600, frequency: "biweekly" },
+                  { id: uid(), kind: "cash-gig", status: "confirmed", label: "Weekend tips",   amount: 250,  frequency: "weekly", steadiness: "variable" },
+                ]);
+                go("connections");
+              }} />
+              <Chip label="BV + manual side" selected={false} onClick={() => {
+                setHasRoarMoney(false);
+                setAccountState("bv-linked");
+                setIncomes([
+                  { id: uid(), kind: "bank-detected", status: "confirmed", label: "Main paycheck", amount: 1400, frequency: "biweekly" },
+                  { id: uid(), kind: "manual",        status: "confirmed", label: "Freelance",     amount: 600,  frequency: "monthly" },
+                ]);
+                go("connections");
+              }} />
+              <Chip label="Cash + manual" selected={false} onClick={() => {
+                setHasRoarMoney(false);
+                setAccountState("manual-only");
+                setIncomes([
+                  { id: uid(), kind: "manual",   status: "confirmed", label: "W-2 paycheck", amount: 2200, frequency: "biweekly" },
+                  { id: uid(), kind: "cash-gig", status: "confirmed", label: "Cash tips",    amount: 300,  frequency: "weekly", steadiness: "steady" },
+                ]);
+                go("connections");
+              }} />
+              <Chip label="BV + one-time gig" selected={false} onClick={() => {
+                setHasRoarMoney(false);
+                setAccountState("bv-linked");
+                setIncomes([
+                  { id: uid(), kind: "bank-detected", status: "confirmed", label: "Main paycheck", amount: 1400, frequency: "biweekly" },
+                  { id: uid(), kind: "cash-gig", status: "confirmed", label: "Freelance gig", amount: 500, frequency: "monthly", occurrence: "one-time", date: "2026-04-20" },
+                ]);
+                go("connections");
+              }} />
+            </div>
+          </div>
+
+          <div>
             <p style={{ margin:"0 0 8px", fontSize:10, fontWeight:600, color:T.text3, textTransform:"uppercase", letterSpacing:"0.6px" }}>Paycheck signal</p>
             <div style={{ display:"grid", gap:6 }}>
               <Chip label="Detected"     selected={paycheckSignal==="detected"}     onClick={()=>setPaycheckSignal("detected")} />
@@ -2248,13 +3063,13 @@ export default function App() {
             </div>
           </div>
 
-          <button onClick={()=>{ go("accounts"); setAccountState("new-user"); setRisk("tight"); setLinkedOverlay("none"); setLinkedIncomeStatus("unconfirmed"); setNeedsReconciliation(false); setCarriedManualObligations(0); setIsJointAccount(false); setJointShare(null); setSimulateJoint(false); setSimulateLowHistory(false); setPaycheckSignal("detected"); setHasRoarMoney(false); }} style={{ height:40, border:`1px solid ${T.border}`, borderRadius:999, background:"transparent", fontSize:13, fontWeight:600, color:T.text2, cursor:"pointer", fontFamily:"inherit" }}>↺ Reset flow</button>
+          <button onClick={()=>{ go("accounts"); setAccountState("new-user"); setRisk("tight"); setLinkedOverlay("none"); setIncomes([]); setNeedsReconciliation(false); setCarriedManualObligations(0); setIsJointAccount(false); setJointShare(null); setSimulateJoint(false); setSimulateLowHistory(false); setPaycheckSignal("detected"); setHasRoarMoney(false); }} style={{ height:40, border:`1px solid ${T.border}`, borderRadius:999, background:"transparent", fontSize:13, fontWeight:600, color:T.text2, cursor:"pointer", fontFamily:"inherit" }}>↺ Reset flow</button>
 
           <p style={{ margin:0, fontSize:10, color:T.text3, lineHeight:"15px" }}>Font: DM Sans<br/>Production: Baton Turbo<br/>Tokens: MLDS 4.0</p>
         </div>
 
         {/* ── Phone frame ──────────────────────────────────────── */}
-        <div style={{ width:390, borderRadius:52, overflow:"hidden", boxShadow:"0 24px 64px rgba(0,0,0,0.28)", background:T.bgPage, border:"8px solid #1A1A1A", flexShrink:0, display:"flex", flexDirection:"column" }}>
+        <div style={{ width:390, borderRadius:52, overflow:"hidden", boxShadow:"0 24px 64px rgba(0,0,0,0.28)", background:T.bgPage, border:"8px solid #1A1A1A", flexShrink:0, display:"flex", flexDirection:"column", position:"relative" }}>
 
           {/* Status bar */}
           <div style={{ height:52, background:T.bgPage, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 24px", fontSize:13, fontWeight:600, flexShrink:0, position:"relative" }}>
@@ -2264,26 +3079,67 @@ export default function App() {
           </div>
 
           {/* Scrollable screen content */}
-          <div style={{ flex:1, overflowY:"auto", maxHeight:730 }}>
-            {screen === "accounts"        && <AccountsScreen    accountState={accountState} linkedIncomeStatus={linkedIncomeStatus} hasRoarMoney={hasRoarMoney} onWidgetTap={handleWidgetTap} onConnections={()=>go("connections")} />}
-            {screen === "splash"          && <SplashScreen      onClose={()=>go("accounts")} onContinue={()=>go("connections")} />}
-            {screen === "connections"     && <ConnectionsScreen accountState={accountState} linkedOverlay={linkedOverlay} linkedIncomeStatus={linkedIncomeStatus} hasRoarMoney={hasRoarMoney} onBack={()=>go("accounts")} onLinkBank={()=>go("link-bank")} onConfirmPaycheck={()=>go("paycheck-confirm")} onGoToCashFlow={()=>go("cashflow")} onManual={()=>go("manual-paycheck")} />}
-            {screen === "link-bank"       && <LinkBankScreen    onBack={()=>go("connections")} onSelect={handleBankSelect} />}
+          <div style={{ flex:1, overflowY:"auto", overflowX:"hidden", maxHeight:730, minWidth:0, width:"100%", boxSizing:"border-box" }}>
+            {screen === "accounts"        && <AccountsScreen    accountState={accountState} incomes={incomes} hasRoarMoney={hasRoarMoney} onWidgetTap={handleWidgetTap} onConnections={()=>go("connections")} />}
+            {screen === "splash"          && <SplashScreen      onClose={()=>go("accounts")} onLinkAccount={()=>go("link-bank")} onManual={()=>go("manual-paycheck")} />}
+            {screen === "connections"     && <ConnectionsScreen accountState={accountState} linkedOverlay={linkedOverlay} incomes={incomes} hasRoarMoney={hasRoarMoney} onBack={()=>go("accounts")} onLinkBank={()=>go("link-bank")} onConfirmPaycheck={()=>go("paycheck-confirm")} onGoToCashFlow={()=>go("cashflow")} onManual={()=>go("manual-paycheck")} onOpenAddSheet={()=>setAddSheetOpen(true)} onOpenEditSheet={(src)=>setEditingIncome(src)} />}
+            {screen === "link-bank"       && <LinkBankScreen    onBack={()=>go(accountState === "new-user" ? "splash" : "connections")} onSelect={handleBankSelect} />}
             {screen === "link-connecting" && <LinkConnectingScreen bank={bank ?? "Chase"} onConnected={handleConnected} />}
             {screen === "joint-account"   && <JointAccountScreen bank={bank ?? "Chase"} onConfirm={handleJointConfirm} />}
             {screen === "bill-review"     && <BillReviewScreen simulateLowHistory={simulateLowHistory} needsReconciliation={needsReconciliation} onBack={()=>go("link-connecting")} onComplete={handleBillReviewComplete} />}
             {screen === "paycheck-confirm"&& <PaycheckConfirmScreen signal={paycheckSignal} hasRoarMoney={hasRoarMoney} onBack={()=>go("bill-review")} onConfirmDetected={handleIncomeDetectedConfirm} onUseManual={handleIncomeManualConfirm} onUseDirectDeposit={handleIncomeDDConfirm} />}
             {screen === "reconciliation"  && <ReconciliationScreen onBack={()=>go("paycheck-confirm")} onComplete={handleReconciliationComplete} />}
             {screen === "cf-settings"     && <CashFlowSettingsScreen accountState={accountState} carriedManualObligations={carriedManualObligations} onBack={()=>go("cashflow")} onImproveAccuracy={()=>go("link-bank")} onReviewBills={()=>go("bill-review")} onManualEntries={()=>go("reconciliation")} onConnections={()=>go("connections")} />}
-            {screen === "manual-paycheck" && <ManualPaycheckScreen onBack={()=>go("splash")} onContinue={()=>go("manual-bills")} />}
+            {screen === "manual-paycheck" && <ManualPaycheckScreen onBack={()=>go("splash")} onContinue={()=>go("manual-bills")} onContinueCash={handleManualCashContinue} incomes={incomes} onSaveAdditional={(src) => setIncomes(prev => [...prev.filter(i => i.kind !== src.kind), { id: uid(), ...src }])} />}
             {screen === "manual-bills"    && <ManualBillsScreen  onBack={()=>go("manual-paycheck")} onDone={handleManualDone} />}
-            {screen === "cashflow"        && <CashFlowScreen     accountState={accountState} risk={risk} linkedOverlay={linkedOverlay} linkedIncomeStatus={linkedIncomeStatus} carriedManualObligations={carriedManualObligations} isJointAccount={isJointAccount} jointShare={jointShare} onBack={()=>go("accounts")} onLinkBank={()=>go("link-bank")} onOpenSettings={()=>go("cf-settings")} onOpenConnections={()=>go("connections")} />}
+            {screen === "cashflow"        && <CashFlowScreen     accountState={accountState} risk={risk} linkedOverlay={linkedOverlay} incomes={incomes} carriedManualObligations={carriedManualObligations} isJointAccount={isJointAccount} jointShare={jointShare} onBack={()=>go("accounts")} onLinkBank={()=>go("link-bank")} onOpenSettings={()=>go("cf-settings")} onOpenConnections={()=>go("connections")} />}
           </div>
 
           {/* Home indicator */}
           <div style={{ height:34, background:T.bgPage, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
             <div style={{ width:134, height:5, borderRadius:999, background:"#1A1A1A" }} />
           </div>
+
+          {/* Bottom sheets — rendered at phone-frame level so they overlay correctly (Phase 13b) */}
+          {addSheetOpen && (() => {
+            const { hasDD, hasManual, hasCash } = getIncomeHelpers(incomes);
+            const hasBank = incomes.some(i => i.kind === "bank-detected");
+            const options: Array<{ action: AddIncomeAction; disabled?: boolean; disabledReason?: string }> = [];
+            if (!hasBank) options.push({ action:"link-bank" });
+            if (!hasManual) options.push({ action:"manual" });
+            if (!hasCash) options.push({ action:"cash" });
+            if (!hasDD) options.push({
+              action:"dd",
+              disabled: !hasRoarMoney,
+              disabledReason: "Open a RoarMoney account first to enable direct deposit.",
+            });
+            return (
+              <AddIncomeSheet
+                options={options}
+                hasRoarMoney={hasRoarMoney}
+                onClose={() => setAddSheetOpen(false)}
+                onPick={(action) => {
+                  setAddSheetOpen(false);
+                  if (action === "link-bank") go("link-bank");
+                  else if (action === "manual") go("manual-paycheck");
+                  else if (action === "cash") go("manual-paycheck");
+                  else if (action === "dd") {
+                    addIncome({ kind:"dd", status:"confirmed", label:"Direct deposit", amount:1400, frequency:"biweekly" });
+                    setAccountState("roarmoney-dd");
+                  }
+                }}
+              />
+            );
+          })()}
+
+          {editingIncome && (
+            <EditIncomeSheet
+              src={editingIncome}
+              onClose={() => setEditingIncome(null)}
+              onSave={(patch) => updateIncome(editingIncome.id, patch)}
+              onRemove={() => removeIncome(editingIncome.id)}
+            />
+          )}
         </div>
 
       </div>
