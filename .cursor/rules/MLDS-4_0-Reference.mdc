@@ -4,9 +4,12 @@ alwaysApply: true
 
 # MLDS 4.0 — MoneyLion Design System Reference
 
-> **What this file is:** The single source of truth for all visual tokens, component specs, spacing, typography, and interaction patterns in the MoneyLion Design System. Every prototype, audit, and design recommendation should reference this file for exact values.
+> **What this file is:** The single source of truth for component specs, design audits, copy reviews, and written design recommendations.
+>
+> **⚠️ For prototype work, see `MLDS-prototype-tokens.mdc` first.** That file is the canonical token sheet for any rendered React/HTML/canvas artifact (font family, hex values, radii, spacing, shadows). When the two disagree, the prototype-tokens file wins for prototype work. Some values here (Teal-700/800/1000, Red-500, Yellow-500, radius scale) are **superseded** by the prototype-tokens file.
 >
 > **Related files:**
+> - `MLDS-prototype-tokens.mdc` — Canonical token sheet for all prototype work (Baton Turbo `@font-face` + colors + radii)
 > - `company-context.md` — Vision, strategy, product surface, user segments, regulatory constraints (the "what and why" file)
 > - `moneylion-project-instructions.md` — Design consulting role, voice/tone, UX principles, feedback frameworks
 > - `moneylion-workflow-instructions.md` — Shorthand triggers (`/react`, `/audit`, etc.), response formats, session patterns
@@ -18,9 +21,7 @@ alwaysApply: true
 
 ## React Prototype Token Map
 
-When building interactive prototypes (via `/react` or any JSX/HTML mockup), use these CSS custom properties. This ensures every prototype uses real MLDS values rather than approximations.
-
-**Important:** Baton Turbo is not available via Google Fonts or CDN. For prototypes, use `'DM Sans', -apple-system, system-ui, sans-serif` as the closest web-safe substitute. Note this substitution in prototype output so stakeholders know the final product uses Baton Turbo.
+> **Superseded for prototype work** by `MLDS-prototype-tokens.mdc` (Apr 29, 2026). The values below remain accurate for design audits and component spec discussion. For any new prototype build or active iteration, use the canonical token sheet in `MLDS-prototype-tokens.mdc` — it includes the real Baton Turbo `@font-face` block and the corrected MLDS hex ramp (Teal-700/800/1000, Red-500, Yellow-500, radius scale).
 
 ### Light Mode (default for MoneyLion product screens)
 

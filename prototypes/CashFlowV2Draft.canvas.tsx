@@ -27,18 +27,20 @@ import {
 } from "lucide-react";
 
 // =====================================================================
-// MLDS 4.0 Token Map (light mode, per MLDS-4_0-Reference.mdc)
+// MLDS Prototype Token Map (canonical)
+// Source: .cursor/rules/MLDS-prototype-tokens.mdc + cashflow-prototype/src/styles/mlds-tokens.css
+// Baton Turbo @font-face declarations are loaded globally via main.tsx.
 // =====================================================================
 const T = {
   // Background
-  bgPrimary: "#F6F6F6",
-  bgCard: "#FFFFFF",
+  bgPrimary: "#F6F6F6", // Neutral-100
+  bgCard: "#FFFFFF", // Neutral-0
   bgTertiary: "#F6F6F6",
 
-  // Accent backgrounds
-  bgAccent: "#E1FEFA", // Teal-100
-  bgWarning: "#FFFCE9", // Yellow-100
-  bgNegative: "#FFEBED", // Red-100
+  // Accent backgrounds (MLDS 3.0 canonical)
+  bgAccent: "#B2FCF1", // Teal-300 (3.0 has no Teal-100; 300 is the lightest available)
+  bgWarning: "#FAF5CC", // Yellow-100
+  bgNegative: "#FCCFC5", // Red-100
   bgNeutral: "#EEEEEE", // Neutral-200
 
   // Text
@@ -48,27 +50,29 @@ const T = {
   textDisabled: "rgba(0,0,0,0.32)",
   textInverse: "#FFFFFF",
 
-  // Semantic content
-  accent: "#006657", // Teal-900
-  positive: "#006657",
-  warning: "#B89F00", // Yellow-700
-  negative: "#CE293F", // Red-600
+  // Semantic content (text/icon colors on light surfaces)
+  accent: "#11937E", // Teal-800 — darkest readable teal in 3.0 ramp
+  positive: "#11937E",
+  warning: "#736700", // Yellow-800
+  negative: "#CE293F", // kept — 3.0 Red-500 (#FF5E57) is too light for text contrast
 
-  // Brand
+  // Brand primaries
   tealPrimary: "#00E5C4", // Teal-600
-  tealLight: "#E1FEFA",
-  red300: "#FFADB8",
-  yellow500: "#FFE11F",
+  tealLight: "#B2FCF1",
+  red300: "#FABCAF", // Red-300 (3.0)
+  yellow500: "#FFDD59", // Yellow-500 (3.0)
   contextualCoral: "#FFA093",
-  contextualLightBlue: "#91EBF7",
+  contextualLightBlue: "#91EBF7", // legacy — not in 3.0 ramp; retained for spending category icons
 
   // Borders
   border: "rgba(0,0,0,0.08)",
   borderAccent: "#B2FCF1", // Teal-300
-  borderNegative: "#FFADB8", // Red-300
-  borderWarning: "#FFF3A5", // Yellow-300
+  borderNegative: "#FABCAF", // Red-300 (3.0)
+  borderWarning: "#F5EB99", // Yellow-300 (3.0)
 
-  // Radii
+  // Radii — kept from prior tuning to avoid visual regression in the
+  // current build. 3.0 canonical scale is xs:4 sm:8 md:14 lg:20 xl:24
+  // 2xl:40 pill:9999. Migrate in a dedicated pass if alignment matters.
   radiusXs: 8,
   radiusSm: 12,
   radiusMd: 16,
@@ -76,7 +80,8 @@ const T = {
   radiusFull: 999,
 };
 
-const FONT_FAMILY = "'DM Sans', -apple-system, system-ui, sans-serif";
+const FONT_FAMILY =
+  '"Baton Turbo", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 
 // =====================================================================
 // Type definitions
@@ -376,6 +381,9 @@ const RecommendedBadge: FC = () => (
   </span>
 );
 
+// Outline card primitive — matches MLDS List 3.0 "card-more ways" Figma spec.
+// 12px radius, 1px hairline border at rgba(0,0,0,0.15), overflow:hidden so
+// inner row dividers don't bleed past rounded corners.
 const Card: FC<{
   children: ReactNode;
   pad?: number;
@@ -384,7 +392,9 @@ const Card: FC<{
   <div
     style={{
       background: T.bgCard,
-      borderRadius: T.radiusMd,
+      borderRadius: 12,
+      border: "1px solid rgba(0,0,0,0.15)",
+      overflow: "hidden",
       padding: pad,
       ...style,
     }}
@@ -795,14 +805,18 @@ const PillarRow: FC<{
   onClick?: () => void;
   isLast?: boolean;
 }> = ({ title, meta, iconKind, chevron, onClick, isLast }) => {
+  // checkCircle (confirmed) and radiobuttonIndeterminate (pending) per
+  // MLDS List 3.0 leading-icon spec. Indeterminate is neutral, not red —
+  // it signals "still detecting", not error.
   const Icon = (
     <div
       style={{
         width: 24,
         height: 24,
-        borderRadius: T.radiusFull,
+        borderRadius: 999,
         background: iconKind === "confirmed" ? T.textPrimary : "transparent",
-        border: iconKind === "confirmed" ? "0" : `1.5px solid ${T.red300}`,
+        border:
+          iconKind === "confirmed" ? "0" : `1.5px solid rgba(0,0,0,0.48)`,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -812,7 +826,7 @@ const PillarRow: FC<{
       {iconKind === "confirmed" ? (
         <Check size={14} color="#FFFFFF" strokeWidth={3} />
       ) : (
-        <Minus size={14} color={T.red300} strokeWidth={3} />
+        <Minus size={14} color="rgba(0,0,0,0.48)" strokeWidth={2.5} />
       )}
     </div>
   );
@@ -823,7 +837,7 @@ const PillarRow: FC<{
       disabled={!onClick}
       style={{
         width: "100%",
-        padding: "16px 16px",
+        padding: "16px 16px 16px 12px",
         background: "transparent",
         border: 0,
         borderBottom: isLast ? "0" : `1px solid ${T.border}`,
@@ -837,14 +851,23 @@ const PillarRow: FC<{
     >
       {Icon}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 15, fontWeight: 600, letterSpacing: -0.3 }}>
+        <div
+          style={{
+            fontSize: 16,
+            lineHeight: "24px",
+            fontWeight: 400,
+            color: T.textPrimary,
+            letterSpacing: -0.32,
+          }}
+        >
           {title}
         </div>
         <div
           style={{
-            fontSize: 13,
-            color: T.textSecondary,
-            letterSpacing: -0.2,
+            fontSize: 14,
+            lineHeight: "20px",
+            color: "rgba(0,0,0,0.6)",
+            letterSpacing: -0.28,
             marginTop: 2,
           }}
         >
@@ -852,10 +875,10 @@ const PillarRow: FC<{
         </div>
       </div>
       {chevron === "down" && (
-        <ChevronDown size={20} color={T.textTertiary} />
+        <ChevronDown size={28} color={T.textTertiary} strokeWidth={1.75} />
       )}
       {chevron === "right" && (
-        <ChevronRight size={20} color={T.textTertiary} />
+        <ChevronRight size={28} color={T.textTertiary} strokeWidth={1.75} />
       )}
     </button>
   );
@@ -1104,7 +1127,7 @@ const OverviewScreen: FC<{
                 billsDetected ? "$850/mo detected" : "No bills detected"
               }
               iconKind={billsDetected ? "confirmed" : "indeterminate"}
-              chevron={billsDetected ? "right" : "none"}
+              chevron="none"
               onClick={billsDetected ? onTapBills : undefined}
               isLast
             />
@@ -2138,9 +2161,9 @@ const LowConfidenceCallout: FC<{ onAddDetails: () => void }> = ({
     style={{
       marginTop: 12,
       background: T.bgCard,
-      borderRadius: T.radiusMd,
+      borderRadius: 12,
       padding: 16,
-      border: `1px solid ${T.border}`,
+      border: "1px solid rgba(0,0,0,0.15)",
     }}
   >
     <div
@@ -2250,8 +2273,8 @@ const SectionCard: FC<{
     <div
       style={{
         background: accent ? T.bgAccent : T.bgCard,
-        borderRadius: T.radiusMd,
-        border: `1px solid ${accent ? T.borderAccent : T.border}`,
+        borderRadius: 12,
+        border: `1px solid ${accent ? T.borderAccent : "rgba(0,0,0,0.15)"}`,
         overflow: "hidden",
       }}
     >

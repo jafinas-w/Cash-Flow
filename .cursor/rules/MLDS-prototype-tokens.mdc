@@ -1,0 +1,316 @@
+---
+alwaysApply: true
+---
+
+# MLDS — Prototype Token Source of Truth
+
+> **What this file is:** The canonical CSS token sheet exported from the MLDS Figma "Color-Tokens" and "Typography" pages. This file overrides the React Prototype Token Map in `MLDS-4_0-Reference.mdc` for any prototype font, color, radius, spacing, shadow, and motion value. When the two disagree, **this file wins for prototype work**.
+>
+> **When to use which file:**
+> - **Building prototypes (`.canvas.tsx`, `.canvas.jsx`, any rendered React/HTML)** → use the tokens in this file
+> - **Design audits, copy reviews, component specs, written design recommendations** → MLDS-4.0 reference still applies
+>
+> **Source:** MLDS Figma "Color-Tokens" + "Typography" pages, exported as `colors_and_type.css`. Real Baton Turbo `.otf` foundry files ship alongside the CSS in `/fonts/`.
+
+---
+
+## Critical change from MLDS-4.0 reference
+
+| Topic | Old guidance (MLDS-4.0 reference) | **Now (this file)** |
+|---|---|---|
+| Font family | `'DM Sans', -apple-system, system-ui, sans-serif` (substitute, because Baton Turbo wasn't web-accessible) | **Baton Turbo** via `@font-face` (Book/Regular/Medium/Bold/Heavy) with the same fallback stack |
+| Teal-700 | `#00B89D` | `#1EBABA` |
+| Teal-800 | `#098669` | `#11937E` |
+| Teal-1000 | `#072C28` | `#05332C` |
+| Red-500 | `#FF334E` | `#FF5E57` |
+| Yellow-500 | `#FFE11F` | `#FFDD59` |
+| Radius scale | `--radius-xs: 8px` etc. | New scale: `--ml-radius-xs: 4px`, `sm: 8px`, `md: 14px`, `lg: 20px`, `xl: 24px`, `2xl: 40px`, `pill: 9999px` |
+| Spacing | 8pt grid | 4pt grid (`--ml-space-1: 4px` … `--ml-space-20: 80px`) |
+| Type scale | Mobile-first overrides at <480px | Mobile defaults baked in. Desktop scales up at ≥1024px (handled in production CSS, not the prototype) |
+
+Existing prototypes built against MLDS-4.0 values do not need to be retroactively migrated. Apply this rule to all **new** prototype work and any active iteration.
+
+---
+
+## Setup for Vite prototype apps (`cashflow-prototype/`)
+
+1. Copy the Baton Turbo `.otf` files to `cashflow-prototype/public/fonts/` (they live at `/Users/jaf.jaffaizal/Desktop/🦁/00 AI/MoneyLion Design System/fonts/`).
+2. Drop the full `colors_and_type.css` into `cashflow-prototype/src/styles/mlds-tokens.css`.
+3. Import once at the entry: `import './styles/mlds-tokens.css'` in `src/main.tsx`.
+4. In inline-style components, reference tokens via `var(--ml-*)` strings or a typed JS object that mirrors the tokens (see `T = { ... }` pattern at the top of `prototypes/CashFlowV2Draft.canvas.tsx`).
+
+If the font files cannot be bundled (e.g., a stakeholder-facing artifact must be portable), fall back to `'DM Sans', -apple-system, system-ui, sans-serif` and explicitly note the substitution under the artifact.
+
+---
+
+## Full token sheet (canonical)
+
+```css
+/* MoneyLion Design System — Colors & Type tokens */
+
+@font-face { font-family: "Baton Turbo"; font-weight: 400; font-style: normal;
+  src: url("fonts/BatonTurbo-Book.otf") format("opentype"); font-display: swap; }
+@font-face { font-family: "Baton Turbo"; font-weight: 400; font-style: italic;
+  src: url("fonts/BatonTurbo-BookItalic.otf") format("opentype"); font-display: swap; }
+@font-face { font-family: "Baton Turbo"; font-weight: 450; font-style: normal;
+  src: url("fonts/BatonTurbo-Regular.otf") format("opentype"); font-display: swap; }
+@font-face { font-family: "Baton Turbo"; font-weight: 450; font-style: italic;
+  src: url("fonts/BatonTurbo-RegularItalic.otf") format("opentype"); font-display: swap; }
+@font-face { font-family: "Baton Turbo"; font-weight: 500; font-style: normal;
+  src: url("fonts/BatonTurbo-Medium.otf") format("opentype"); font-display: swap; }
+@font-face { font-family: "Baton Turbo"; font-weight: 500; font-style: italic;
+  src: url("fonts/BatonTurbo-MediumItalic.otf") format("opentype"); font-display: swap; }
+@font-face { font-family: "Baton Turbo"; font-weight: 700; font-style: normal;
+  src: url("fonts/BatonTurbo-Bold.otf") format("opentype"); font-display: swap; }
+@font-face { font-family: "Baton Turbo"; font-weight: 700; font-style: italic;
+  src: url("fonts/BatonTurbo-BoldItalic.otf") format("opentype"); font-display: swap; }
+@font-face { font-family: "Baton Turbo"; font-weight: 800; font-style: normal;
+  src: url("fonts/BatonTurbo-Heavy.otf") format("opentype"); font-display: swap; }
+@font-face { font-family: "Baton Turbo"; font-weight: 800; font-style: italic;
+  src: url("fonts/BatonTurbo-HeavyItalic.otf") format("opentype"); font-display: swap; }
+
+:root {
+  /* ── PRIMITIVE NEUTRALS ─────────────────────────────────────── */
+  --ml-neutral-0:    #FFFFFF;
+  --ml-neutral-100:  #F6F6F6;
+  --ml-neutral-200:  #EEEEEE;
+  --ml-neutral-300:  #E2E2E2;
+  --ml-neutral-400:  #C7C7C7;
+  --ml-neutral-500:  #ADADAD;
+  --ml-neutral-550:  #A5A5A5;
+  --ml-neutral-600:  #666666;
+  --ml-neutral-650:  #676767;
+  --ml-neutral-700:  #505050;
+  --ml-neutral-750:  #434343;
+  --ml-neutral-800:  #333333;
+  --ml-neutral-900:  #1F1F1F;
+  --ml-neutral-1000: #000000;
+
+  /* Transparent neutrals (over light / over dark) */
+  --ml-t-light-32: rgba(0,0,0,0.32);
+  --ml-t-light-22: rgba(0,0,0,0.22);
+  --ml-t-light-06: rgba(0,0,0,0.06);
+  --ml-t-dark-32:  rgba(255,255,255,0.32);
+  --ml-t-dark-22:  rgba(255,255,255,0.22);
+  --ml-t-dark-20:  rgba(255,255,255,0.20);
+
+  /* ── BRAND TEAL (primary signature) ─────────────────────────── */
+  --ml-teal-300:  #B2FCF1;
+  --ml-teal-500:  #33F6D8;
+  --ml-teal-600:  #00E5C4;   /* BRAND PRIMARY */
+  --ml-teal-700:  #1EBABA;
+  --ml-teal-800:  #11937E;
+  --ml-teal-1000: #05332C;
+
+  /* ── MEMBERSHIP PURPLE (WOW / premium tier) ─────────────────── */
+  --ml-membership-200: #E3D1FA;
+  --ml-membership-300: #C8A2F5;
+  --ml-membership-400: #9E5DEE;
+  --ml-membership-500: #7517E6;  /* Membership primary */
+  --ml-membership-600: #6314C4;
+  --ml-membership-700: #4C0F95;
+  --ml-membership-800: #350A68;
+  --ml-membership-900: #1D063A;
+
+  /* ── SEMANTIC (Reds, Yellows, Greens) ───────────────────────── */
+  --ml-red-100:  #FCCFC5;
+  --ml-red-300:  #FABCAF;
+  --ml-red-500:  #FF5E57;
+  --ml-red-800:  #631200;
+  --ml-red-1000: #330900;
+
+  --ml-yellow-100:  #FAF5CC;
+  --ml-yellow-300:  #F5EB99;
+  --ml-yellow-500:  #FFDD59;
+  --ml-yellow-brand: #FFE548;  /* WOW accent */
+  --ml-yellow-800:  #736700;
+  --ml-yellow-1000: #332E00;
+
+  --ml-green-success: #00CC88;  /* derived — semantic positive */
+
+  /* ── CONTEXTUAL (data-viz, illustrations) ───────────────────── */
+  --ml-ctx-indigo:      #6C82D0;
+  --ml-ctx-yellow:      #FFE548;
+  --ml-ctx-medium-teal: #16ABAB;
+  --ml-ctx-periwinkle:  #8BB6EF;
+  --ml-ctx-coral:       #FFA093;
+  --ml-ctx-purple:      #7517E6;
+  --ml-ctx-pink:        #FF92FA;
+
+  /* ── WEB-ALT (marketing sites / high contrast promos) ───────── */
+  --ml-web-blue:   #358AFF;
+  --ml-web-green:  #00FF94;
+  --ml-web-purple: #7517E6;
+  --ml-web-pink:   #FF92FA;
+  --ml-web-yellow: #FFFC00;
+
+  /* ── GRADIENTS ──────────────────────────────────────────────── */
+  --ml-grad-greenblue: linear-gradient(135deg, #00E5C4 0%, #358AFF 100%);
+  --ml-grad-bottom:    linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.7) 100%);
+  --ml-grad-skeleton-light: linear-gradient(90deg,#EEEEEE 0%,#F6F6F6 50%,#EEEEEE 100%);
+  --ml-grad-skeleton-dark:  linear-gradient(90deg,#1F1F1F 0%,#333333 50%,#1F1F1F 100%);
+
+  /* ── SEMANTIC ROLES (Light mode defaults) ───────────────────── */
+  --ml-bg:           var(--ml-neutral-0);
+  --ml-bg-subtle:    var(--ml-neutral-100);
+  --ml-bg-muted:     var(--ml-neutral-200);
+  --ml-bg-inverse:   var(--ml-neutral-1000);
+
+  --ml-fg:           var(--ml-neutral-1000);
+  --ml-fg-2:         var(--ml-neutral-700);
+  --ml-fg-3:         var(--ml-neutral-600);
+  --ml-fg-muted:     rgba(0,0,0,0.6);
+  --ml-fg-subtle:    rgba(0,0,0,0.32);
+  --ml-fg-inverse:   var(--ml-neutral-0);
+
+  --ml-border:       var(--ml-neutral-300);
+  --ml-border-strong:var(--ml-neutral-1000);
+  --ml-accent:       var(--ml-teal-600);
+  --ml-accent-fg:    var(--ml-neutral-1000);  /* black text on teal */
+  --ml-danger:       var(--ml-red-500);
+  --ml-warning:      var(--ml-yellow-500);
+  --ml-success:      var(--ml-green-success);
+
+  /* ── RADII ──────────────────────────────────────────────────── */
+  --ml-radius-xs: 4px;
+  --ml-radius-sm: 8px;
+  --ml-radius-md: 14px;   /* standard card/field */
+  --ml-radius-lg: 20px;   /* card */
+  --ml-radius-xl: 24px;   /* tile / dialog */
+  --ml-radius-2xl: 40px;  /* hero surface */
+  --ml-radius-pill: 9999px; /* ALL buttons */
+
+  /* ── SPACING (4pt grid) ─────────────────────────────────────── */
+  --ml-space-1: 4px;
+  --ml-space-2: 8px;
+  --ml-space-3: 12px;
+  --ml-space-4: 16px;
+  --ml-space-5: 20px;
+  --ml-space-6: 24px;
+  --ml-space-8: 32px;
+  --ml-space-10: 40px;
+  --ml-space-12: 48px;
+  --ml-space-16: 64px;
+  --ml-space-20: 80px;
+
+  /* ── ELEVATION / SHADOW ─────────────────────────────────────── */
+  --ml-shadow-sm:  0 1px 2px rgba(0,0,0,0.06);
+  --ml-shadow-md:  0 6px 16px rgba(0,0,0,0.08);
+  --ml-shadow-lg:  0 16px 32px rgba(0,0,0,0.10);
+  --ml-shadow-xl:  0 28px 56px rgba(0,0,0,0.15);
+  --ml-shadow-focus: 0 0 0 2px var(--ml-neutral-0), 0 0 0 4px var(--ml-neutral-1000);
+
+  /* ── MOTION ─────────────────────────────────────────────────── */
+  --ml-ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ml-ease-in:       cubic-bezier(0.4, 0, 1, 1);
+  --ml-ease-out:      cubic-bezier(0, 0, 0.2, 1);
+  --ml-dur-xs: 120ms;
+  --ml-dur-sm: 200ms;
+  --ml-dur-md: 320ms;
+  --ml-dur-lg: 520ms;
+
+  /* ── TYPOGRAPHY (Baton Turbo, mobile defaults) ──────────────── */
+  --ml-font-sans:      "Baton Turbo", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --ml-font-secondary: "Graphik", "Baton Turbo", ui-sans-serif, sans-serif;
+  --ml-font-mono:      "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Tracking (letter-spacing) — Baton Turbo optical adjustments */
+  --ml-track-display: -0.030em;
+  --ml-track-heading: -0.030em;
+  --ml-track-body:    -0.020em;
+  --ml-track-label:   -0.010em;
+
+  --ml-text-display-lg: 700 88px/96px var(--ml-font-sans);
+  --ml-text-display-md: 700 56px/64px var(--ml-font-sans);
+  --ml-text-display-sm: 700 36px/44px var(--ml-font-sans); /* mobile hero */
+  --ml-text-headline:   500 28px/36px var(--ml-font-sans);
+  --ml-text-title-lg:   500 24px/32px var(--ml-font-sans);
+  --ml-text-title-md:   500 20px/28px var(--ml-font-sans);
+  --ml-text-title-sm:   500 18px/24px var(--ml-font-sans);
+  --ml-text-label-lg:   500 16px/24px var(--ml-font-sans);
+  --ml-text-label-md:   500 14px/20px var(--ml-font-sans);
+  --ml-text-label-sm:   500 12px/16px var(--ml-font-sans);
+  --ml-text-body-xl:    400 18px/28px var(--ml-font-sans);
+  --ml-text-body-lg:    400 16px/24px var(--ml-font-sans);
+  --ml-text-body-md:    400 14px/20px var(--ml-font-sans);
+  --ml-text-body-sm:    400 12px/16px var(--ml-font-sans);
+}
+
+/* Dark mode token overrides. Applied via .ml-dark on any subtree. */
+.ml-dark, [data-theme="dark"] {
+  --ml-bg:         var(--ml-neutral-1000);
+  --ml-bg-subtle:  var(--ml-neutral-900);
+  --ml-bg-muted:   var(--ml-neutral-800);
+  --ml-bg-inverse: var(--ml-neutral-0);
+
+  --ml-fg:         var(--ml-neutral-0);
+  --ml-fg-2:       var(--ml-neutral-300);
+  --ml-fg-3:       var(--ml-neutral-400);
+  --ml-fg-muted:   rgba(255,255,255,0.6);
+  --ml-fg-subtle:  rgba(255,255,255,0.32);
+  --ml-fg-inverse: var(--ml-neutral-1000);
+
+  --ml-border:        var(--ml-neutral-800);
+  --ml-border-strong: var(--ml-neutral-0);
+}
+```
+
+---
+
+## Inline-style React mapping (canvas prototypes)
+
+Inline-style canvas prototypes can't read CSS variables from a separate sheet via `style={{ color: 'var(--ml-fg)' }}` reliably across all environments — better to mirror the tokens in a single typed `T` object at the top of the file.
+
+```tsx
+const T = {
+  // surfaces
+  bg: "#FFFFFF",
+  bgSubtle: "#F6F6F6",
+  bgMuted: "#EEEEEE",
+  bgInverse: "#000000",
+  // text
+  fg: "#000000",
+  fgMuted: "rgba(0,0,0,0.6)",
+  fgSubtle: "rgba(0,0,0,0.32)",
+  fgInverse: "#FFFFFF",
+  // brand + semantic
+  accent: "#00E5C4",
+  accentFg: "#000000",
+  danger: "#FF5E57",
+  warning: "#FFDD59",
+  success: "#00CC88",
+  // borders
+  border: "#E2E2E2",
+  borderStrong: "#000000",
+  // radii
+  rXs: 4, rSm: 8, rMd: 14, rLg: 20, rXl: 24, r2xl: 40, rPill: 9999,
+  // shadows
+  shadowSm: "0 1px 2px rgba(0,0,0,0.06)",
+  shadowMd: "0 6px 16px rgba(0,0,0,0.08)",
+  shadowLg: "0 16px 32px rgba(0,0,0,0.10)",
+} as const;
+
+const FONT_FAMILY =
+  '"Baton Turbo", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+
+const TYPE = {
+  displaySm: { font: "700 36px/44px " + FONT_FAMILY, letterSpacing: "-0.030em" },
+  headline:  { font: "500 28px/36px " + FONT_FAMILY, letterSpacing: "-0.030em" },
+  titleLg:   { font: "500 24px/32px " + FONT_FAMILY, letterSpacing: "-0.030em" },
+  titleMd:   { font: "500 20px/28px " + FONT_FAMILY, letterSpacing: "-0.030em" },
+  bodyLg:    { font: "400 16px/24px " + FONT_FAMILY, letterSpacing: "-0.020em" },
+  bodyMd:    { font: "400 14px/20px " + FONT_FAMILY, letterSpacing: "-0.020em" },
+  labelMd:   { font: "500 14px/20px " + FONT_FAMILY, letterSpacing: "-0.010em" },
+} as const;
+```
+
+---
+
+## Standing rules for prototype work
+
+- **Always import the `@font-face` block** before relying on Baton Turbo. Otherwise the cascade falls back to system sans and the optical tracking values won't match.
+- **Use the role tokens** (`--ml-bg`, `--ml-fg`, `--ml-accent`) over primitives whenever possible. They auto-flip in dark mode.
+- **Buttons are pills.** Always `--ml-radius-pill`.
+- **Letter-spacing is non-negotiable** on Baton Turbo headings (`-0.030em`). Without it, the font looks wrong.
+- **Never approximate hex values** when these tokens cover the role. If a needed token is missing, surface it instead of inventing one.
+- **Dark mode** is a `.ml-dark` class or `[data-theme="dark"]` attribute on the subtree, not a full theme switch. The hero in `CashFlowV2Draft.canvas.tsx` is the canonical use of selective dark surfaces inside an otherwise light app.

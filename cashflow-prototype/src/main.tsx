@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import './styles/mlds-tokens.css'
 import './index.css'
 import CashFlowV2Draft from '../../prototypes/CashFlowV2Draft.canvas.tsx'
 

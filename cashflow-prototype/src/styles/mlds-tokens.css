@@ -1,0 +1,237 @@
+/* MoneyLion Design System — Colors & Type tokens
+ * Source: .cursor/rules/MLDS-prototype-tokens.mdc (canonical for prototype work)
+ * Baton Turbo .otf files live in /public/fonts and are served from root.
+ * ---------------------------------------------------------------- */
+
+@font-face {
+  font-family: "Baton Turbo";
+  font-weight: 400;
+  font-style: normal;
+  src: url("/fonts/BatonTurbo-Book.otf") format("opentype");
+  font-display: swap;
+}
+@font-face {
+  font-family: "Baton Turbo";
+  font-weight: 400;
+  font-style: italic;
+  src: url("/fonts/BatonTurbo-BookItalic.otf") format("opentype");
+  font-display: swap;
+}
+@font-face {
+  font-family: "Baton Turbo";
+  font-weight: 450;
+  font-style: normal;
+  src: url("/fonts/BatonTurbo-Regular.otf") format("opentype");
+  font-display: swap;
+}
+@font-face {
+  font-family: "Baton Turbo";
+  font-weight: 450;
+  font-style: italic;
+  src: url("/fonts/BatonTurbo-RegularItalic.otf") format("opentype");
+  font-display: swap;
+}
+@font-face {
+  font-family: "Baton Turbo";
+  font-weight: 500;
+  font-style: normal;
+  src: url("/fonts/BatonTurbo-Medium.otf") format("opentype");
+  font-display: swap;
+}
+@font-face {
+  font-family: "Baton Turbo";
+  font-weight: 500;
+  font-style: italic;
+  src: url("/fonts/BatonTurbo-MediumItalic.otf") format("opentype");
+  font-display: swap;
+}
+@font-face {
+  font-family: "Baton Turbo";
+  font-weight: 700;
+  font-style: normal;
+  src: url("/fonts/BatonTurbo-Bold.otf") format("opentype");
+  font-display: swap;
+}
+@font-face {
+  font-family: "Baton Turbo";
+  font-weight: 700;
+  font-style: italic;
+  src: url("/fonts/BatonTurbo-BoldItalic.otf") format("opentype");
+  font-display: swap;
+}
+@font-face {
+  font-family: "Baton Turbo";
+  font-weight: 800;
+  font-style: normal;
+  src: url("/fonts/BatonTurbo-Heavy.otf") format("opentype");
+  font-display: swap;
+}
+@font-face {
+  font-family: "Baton Turbo";
+  font-weight: 800;
+  font-style: italic;
+  src: url("/fonts/BatonTurbo-HeavyItalic.otf") format("opentype");
+  font-display: swap;
+}
+
+:root {
+  /* ── PRIMITIVE NEUTRALS ─────────────────────────────────────── */
+  --ml-neutral-0: #ffffff;
+  --ml-neutral-100: #f6f6f6;
+  --ml-neutral-200: #eeeeee;
+  --ml-neutral-300: #e2e2e2;
+  --ml-neutral-400: #c7c7c7;
+  --ml-neutral-500: #adadad;
+  --ml-neutral-550: #a5a5a5;
+  --ml-neutral-600: #666666;
+  --ml-neutral-650: #676767;
+  --ml-neutral-700: #505050;
+  --ml-neutral-750: #434343;
+  --ml-neutral-800: #333333;
+  --ml-neutral-900: #1f1f1f;
+  --ml-neutral-1000: #000000;
+
+  --ml-t-light-32: rgba(0, 0, 0, 0.32);
+  --ml-t-light-22: rgba(0, 0, 0, 0.22);
+  --ml-t-light-06: rgba(0, 0, 0, 0.06);
+  --ml-t-dark-32: rgba(255, 255, 255, 0.32);
+  --ml-t-dark-22: rgba(255, 255, 255, 0.22);
+  --ml-t-dark-20: rgba(255, 255, 255, 0.20);
+
+  /* ── BRAND TEAL ─────────────────────────────────────────────── */
+  --ml-teal-300: #b2fcf1;
+  --ml-teal-500: #33f6d8;
+  --ml-teal-600: #00e5c4;
+  --ml-teal-700: #1ebaba;
+  --ml-teal-800: #11937e;
+  --ml-teal-1000: #05332c;
+
+  /* ── MEMBERSHIP PURPLE ──────────────────────────────────────── */
+  --ml-membership-200: #e3d1fa;
+  --ml-membership-300: #c8a2f5;
+  --ml-membership-400: #9e5dee;
+  --ml-membership-500: #7517e6;
+  --ml-membership-600: #6314c4;
+  --ml-membership-700: #4c0f95;
+  --ml-membership-800: #350a68;
+  --ml-membership-900: #1d063a;
+
+  /* ── SEMANTIC ──────────────────────────────────────────────── */
+  --ml-red-100: #fccfc5;
+  --ml-red-300: #fabcaf;
+  --ml-red-500: #ff5e57;
+  --ml-red-800: #631200;
+  --ml-red-1000: #330900;
+
+  --ml-yellow-100: #faf5cc;
+  --ml-yellow-300: #f5eb99;
+  --ml-yellow-500: #ffdd59;
+  --ml-yellow-brand: #ffe548;
+  --ml-yellow-800: #736700;
+  --ml-yellow-1000: #332e00;
+
+  --ml-green-success: #00cc88;
+
+  /* ── CONTEXTUAL ─────────────────────────────────────────────── */
+  --ml-ctx-indigo: #6c82d0;
+  --ml-ctx-yellow: #ffe548;
+  --ml-ctx-medium-teal: #16abab;
+  --ml-ctx-periwinkle: #8bb6ef;
+  --ml-ctx-coral: #ffa093;
+  --ml-ctx-purple: #7517e6;
+  --ml-ctx-pink: #ff92fa;
+
+  /* ── ROLE TOKENS (light mode default) ──────────────────────── */
+  --ml-bg: var(--ml-neutral-0);
+  --ml-bg-subtle: var(--ml-neutral-100);
+  --ml-bg-muted: var(--ml-neutral-200);
+  --ml-bg-inverse: var(--ml-neutral-1000);
+
+  --ml-fg: var(--ml-neutral-1000);
+  --ml-fg-2: var(--ml-neutral-700);
+  --ml-fg-3: var(--ml-neutral-600);
+  --ml-fg-muted: rgba(0, 0, 0, 0.6);
+  --ml-fg-subtle: rgba(0, 0, 0, 0.32);
+  --ml-fg-inverse: var(--ml-neutral-0);
+
+  --ml-border: var(--ml-neutral-300);
+  --ml-border-strong: var(--ml-neutral-1000);
+  --ml-accent: var(--ml-teal-600);
+  --ml-accent-fg: var(--ml-neutral-1000);
+  --ml-danger: var(--ml-red-500);
+  --ml-warning: var(--ml-yellow-500);
+  --ml-success: var(--ml-green-success);
+
+  /* ── RADII ──────────────────────────────────────────────────── */
+  --ml-radius-xs: 4px;
+  --ml-radius-sm: 8px;
+  --ml-radius-md: 14px;
+  --ml-radius-lg: 20px;
+  --ml-radius-xl: 24px;
+  --ml-radius-2xl: 40px;
+  --ml-radius-pill: 9999px;
+
+  /* ── SPACING (4pt grid) ─────────────────────────────────────── */
+  --ml-space-1: 4px;
+  --ml-space-2: 8px;
+  --ml-space-3: 12px;
+  --ml-space-4: 16px;
+  --ml-space-5: 20px;
+  --ml-space-6: 24px;
+  --ml-space-8: 32px;
+  --ml-space-10: 40px;
+  --ml-space-12: 48px;
+  --ml-space-16: 64px;
+  --ml-space-20: 80px;
+
+  /* ── ELEVATION ──────────────────────────────────────────────── */
+  --ml-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --ml-shadow-md: 0 6px 16px rgba(0, 0, 0, 0.08);
+  --ml-shadow-lg: 0 16px 32px rgba(0, 0, 0, 0.10);
+  --ml-shadow-xl: 0 28px 56px rgba(0, 0, 0, 0.15);
+  --ml-shadow-focus: 0 0 0 2px var(--ml-neutral-0),
+    0 0 0 4px var(--ml-neutral-1000);
+
+  /* ── MOTION ─────────────────────────────────────────────────── */
+  --ml-ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ml-dur-xs: 120ms;
+  --ml-dur-sm: 200ms;
+  --ml-dur-md: 320ms;
+  --ml-dur-lg: 520ms;
+
+  /* ── TYPOGRAPHY ─────────────────────────────────────────────── */
+  --ml-font-sans: "Baton Turbo", ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, sans-serif;
+  --ml-font-secondary: "Graphik", "Baton Turbo", ui-sans-serif, sans-serif;
+  --ml-font-mono: "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --ml-track-display: -0.030em;
+  --ml-track-heading: -0.030em;
+  --ml-track-body: -0.020em;
+  --ml-track-label: -0.010em;
+}
+
+[data-theme="dark"],
+.ml-dark {
+  --ml-bg: var(--ml-neutral-1000);
+  --ml-bg-subtle: var(--ml-neutral-900);
+  --ml-bg-muted: var(--ml-neutral-800);
+  --ml-bg-inverse: var(--ml-neutral-0);
+
+  --ml-fg: var(--ml-neutral-0);
+  --ml-fg-2: var(--ml-neutral-300);
+  --ml-fg-3: var(--ml-neutral-400);
+  --ml-fg-muted: rgba(255, 255, 255, 0.6);
+  --ml-fg-subtle: rgba(255, 255, 255, 0.32);
+  --ml-fg-inverse: var(--ml-neutral-1000);
+
+  --ml-border: var(--ml-neutral-800);
+  --ml-border-strong: var(--ml-neutral-0);
+}
+
+html,
+body {
+  font-family: var(--ml-font-sans);
+  letter-spacing: var(--ml-track-body);
+  -webkit-font-smoothing: antialiased;
+}
