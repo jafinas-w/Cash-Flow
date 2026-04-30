@@ -11,6 +11,7 @@ import {
   Plus,
   Signal,
   Wifi,
+  Globe,
   Battery,
   Landmark,
   Briefcase,
@@ -228,6 +229,7 @@ const StatusBar: FC = () => (
     <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
       <Signal size={16} fill={T.textPrimary} strokeWidth={0} />
       <Wifi size={16} strokeWidth={2.5} />
+      <Globe size={16} strokeWidth={2.5} />
       <Battery size={22} fill={T.textPrimary} strokeWidth={1.5} />
     </div>
   </div>
