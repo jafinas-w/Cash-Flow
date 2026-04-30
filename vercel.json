@@ -1,7 +1,0 @@
-{
-  "buildCommand": "npm install && npm run build",
-  "outputDirectory": "dist",
-  "installCommand": "echo 'skip root install'",
-  "framework": "vite",
-  "rootDirectory": "cashflow-prototype"
-}
