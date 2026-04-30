@@ -4891,13 +4891,14 @@ const StateSwitcher: FC<{
 // =====================================================================
 export default function CashFlowV2Draft() {
   const [demo, setDemo] = useState<DemoState>({
-    screen: "splash",
-    page: 0,
-    linked: true,
+    screen: "stepperA2b",
+    step: 1,
+    detection: "high",
+    partialMode: "skip",
   });
 
   const [demoConfig, setDemoConfig] = useState<DemoConfig>({
-    path: "a2",
+    path: "a2b",
     mode: "skip",
     detection: "high",
   });
