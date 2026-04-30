@@ -167,20 +167,47 @@ const PhoneFrame: FC<{ children: ReactNode; bg?: string }> = ({
 }) => (
   <div
     style={{
-      width: 390,
-      height: 844,
-      background: bg,
-      borderRadius: 48,
-      border: "1px solid rgba(0,0,0,0.08)",
-      overflow: "hidden",
-      display: "flex",
-      flexDirection: "column",
+      width: 395,
+      height: 832,
+      background: "#000000",
+      borderRadius: 54,
+      padding: "10px",
+      boxShadow:
+        "0 20px 60px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.08) inset",
       position: "relative",
-      fontFamily: FONT_FAMILY,
-      color: T.textPrimary,
     }}
   >
-    {children}
+    {/* Dynamic Island */}
+    <div
+      style={{
+        position: "absolute",
+        top: 20,
+        left: "50%",
+        transform: "translateX(-50%)",
+        width: 126,
+        height: 36,
+        borderRadius: 20,
+        background: "#000000",
+        zIndex: 10,
+      }}
+    />
+    {/* Screen */}
+    <div
+      style={{
+        width: 375,
+        height: 812,
+        background: bg,
+        borderRadius: 44,
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+        position: "relative",
+        fontFamily: FONT_FAMILY,
+        color: T.textPrimary,
+      }}
+    >
+      {children}
+    </div>
   </div>
 );
 
@@ -655,7 +682,7 @@ const SplashScreen: FC<{
   return (
     <PhoneFrame>
       <StatusBar />
-      <NavBar showHelp={false} />
+      <NavBar showBack={false} showHelp={false} />
 
       <div
         style={{
@@ -1291,6 +1318,580 @@ const OverviewScreen: FC<{
 
       <HomeIndicator />
     </PhoneFrame>
+  );
+};
+
+// =====================================================================
+// Screen A2b — Stepper Onboarding (parallel path to A2 Overview)
+// =====================================================================
+
+type StepperPartialMode = "skip" | "show";
+
+type DemoConfig = {
+  path: "a2" | "a2b";
+  mode: StepperPartialMode;
+  detection: DetectionState;
+};
+
+const StepProgress: FC<{ current: number; total: number }> = ({
+  current,
+  total,
+}) => (
+  <div
+    style={{
+      display: "flex",
+      gap: 6,
+      padding: "0 16px",
+      marginBottom: 4,
+    }}
+  >
+    {Array.from({ length: total }, (_, i) => (
+      <div
+        key={i}
+        style={{
+          flex: 1,
+          height: 4,
+          borderRadius: 2,
+          background: i < current ? T.tealPrimary : T.bgNeutral,
+          transition: "background 200ms ease",
+        }}
+      />
+    ))}
+  </div>
+);
+
+const StepperShell: FC<{
+  step: number;
+  totalSteps: number;
+  onBack: () => void;
+  children: ReactNode;
+  primaryLabel: string;
+  onPrimary: () => void;
+  showBack?: boolean;
+  secondaryLabel?: string;
+  onSecondary?: () => void;
+  footerLink?: { label: string; onClick?: () => void };
+}> = ({
+  step,
+  totalSteps,
+  onBack,
+  children,
+  primaryLabel,
+  onPrimary,
+  showBack = true,
+  secondaryLabel,
+  onSecondary,
+  footerLink,
+}) => (
+  <PhoneFrame>
+    <StatusBar />
+    <NavBar title="Cash Flow" onBack={onBack} showBack={showBack} />
+    <StepProgress current={step} total={totalSteps} />
+
+    <div
+      style={{
+        flex: 1,
+        overflowY: "auto",
+        padding: "8px 16px 0",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {children}
+
+      <div style={{ flex: 1, minHeight: 16 }} />
+
+      {footerLink && (
+        <button
+          onClick={footerLink.onClick}
+          style={{
+            background: "transparent",
+            border: 0,
+            color: T.accent,
+            fontSize: 14,
+            fontWeight: 600,
+            letterSpacing: -0.2,
+            fontFamily: FONT_FAMILY,
+            cursor: "pointer",
+            padding: "8px 0",
+            textAlign: "center",
+            marginBottom: 8,
+          }}
+        >
+          {footerLink.label}
+        </button>
+      )}
+
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 4,
+          paddingBottom: 16,
+        }}
+      >
+        <PrimaryButton label={primaryLabel} onClick={onPrimary} />
+        {secondaryLabel && onSecondary && (
+          <TransparentButton label={secondaryLabel} onClick={onSecondary} />
+        )}
+      </div>
+    </div>
+
+    <HomeIndicator />
+  </PhoneFrame>
+);
+
+// Step 1 — Accounts we're tracking
+const AccountsStepScreen: FC<{
+  totalSteps: number;
+  onContinue: () => void;
+  onBack: () => void;
+}> = ({ totalSteps, onContinue, onBack }) => (
+  <StepperShell
+    step={1}
+    totalSteps={totalSteps}
+    onBack={onBack}
+    primaryLabel="Continue"
+    onPrimary={onContinue}
+    showBack
+    footerLink={{ label: "Link another account" }}
+  >
+    <h1
+      style={{
+        fontSize: 28,
+        lineHeight: "36px",
+        fontWeight: 600,
+        letterSpacing: -1,
+        margin: 0,
+      }}
+    >
+      Accounts we're tracking
+    </h1>
+    <p
+      style={{
+        marginTop: 8,
+        fontSize: 14,
+        lineHeight: "20px",
+        color: T.textSecondary,
+        letterSpacing: -0.2,
+      }}
+    >
+      Here's where we'll watch your money move. Add more accounts for a
+      fuller picture.
+    </p>
+
+    <div style={{ marginTop: 20 }}>
+      <Card>
+        {BANK_ACCOUNTS.map((acc, i) => (
+          <ExpandedRow
+            key={acc.name}
+            icon={
+              <MerchantAvatar
+                src={acc.src}
+                iconSrc={acc.iconSrc}
+                color={acc.color}
+                initial={acc.name[0]}
+                size={36}
+              />
+            }
+            title={acc.name}
+            detail={acc.detail}
+            amount={`$${acc.balance.toLocaleString()}`}
+            isLast={i === BANK_ACCOUNTS.length - 1}
+          />
+        ))}
+      </Card>
+    </div>
+
+    <p
+      style={{
+        marginTop: 16,
+        fontSize: 12,
+        lineHeight: "16px",
+        color: T.textTertiary,
+        letterSpacing: -0.2,
+        textAlign: "center",
+      }}
+    >
+      Read-only access. We never store your login.
+    </p>
+  </StepperShell>
+);
+
+// Step 2 — Your income
+const IncomeStepScreen: FC<{
+  totalSteps: number;
+  detection: DetectionState;
+  partialMode: StepperPartialMode;
+  onContinue: () => void;
+  onBack: () => void;
+}> = ({ totalSteps, detection, partialMode, onContinue, onBack }) => {
+  const incomeDetected = detection === "high" || detection === "partial";
+
+  const headline = incomeDetected
+    ? "Your income"
+    : detection === "building"
+      ? "Your income"
+      : "Your income";
+
+  const subhead = incomeDetected
+    ? "We found these paychecks coming in."
+    : detection === "building"
+      ? "We're still analyzing your transactions. Income patterns usually appear within 24 hours."
+      : "We didn't find income yet. Income from accounts you haven't linked won't show up here.";
+
+  return (
+    <StepperShell
+      step={2}
+      totalSteps={totalSteps}
+      onBack={onBack}
+      primaryLabel="Continue"
+      onPrimary={onContinue}
+      secondaryLabel="Back"
+      onSecondary={onBack}
+    >
+      <h1
+        style={{
+          fontSize: 28,
+          lineHeight: "36px",
+          fontWeight: 600,
+          letterSpacing: -1,
+          margin: 0,
+        }}
+      >
+        {headline}
+      </h1>
+      <p
+        style={{
+          marginTop: 8,
+          fontSize: 14,
+          lineHeight: "20px",
+          color: T.textSecondary,
+          letterSpacing: -0.2,
+        }}
+      >
+        {subhead}
+      </p>
+
+      {incomeDetected ? (
+        <div style={{ marginTop: 20 }}>
+          <Card>
+            {PAYCHECK_SOURCES.map((src, i) => (
+              <ExpandedRow
+                key={src.name}
+                icon={
+                  <Landmark
+                    size={16}
+                    color={T.textSecondary}
+                    strokeWidth={2}
+                  />
+                }
+                title={src.name}
+                detail={src.detail}
+                amount={`$${src.amount.toLocaleString()}`}
+                isLast={i === PAYCHECK_SOURCES.length - 1}
+              />
+            ))}
+          </Card>
+        </div>
+      ) : (
+        partialMode === "show" && (
+          <div style={{ marginTop: 20 }}>
+            <Card pad={16}>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  textAlign: "center",
+                  gap: 12,
+                }}
+              >
+                <div
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: T.radiusFull,
+                    background:
+                      detection === "building" ? T.bgWarning : T.bgNeutral,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {detection === "building" ? (
+                    <RotateCw
+                      size={22}
+                      color={T.warning}
+                      strokeWidth={2}
+                      style={{ animation: "v2-spin 2s linear infinite" }}
+                    />
+                  ) : (
+                    <Minus
+                      size={22}
+                      color={T.textTertiary}
+                      strokeWidth={2}
+                    />
+                  )}
+                </div>
+                <ConfidenceChip
+                  variant={detection === "building" ? "building" : "limited"}
+                />
+                <p
+                  style={{
+                    fontSize: 13,
+                    lineHeight: "18px",
+                    color: T.textSecondary,
+                    letterSpacing: -0.2,
+                    margin: 0,
+                  }}
+                >
+                  {detection === "building"
+                    ? "Check back soon. We'll notify you when we detect a paycheck."
+                    : "Try linking the account where your paycheck lands."}
+                </p>
+              </div>
+            </Card>
+          </div>
+        )
+      )}
+    </StepperShell>
+  );
+};
+
+// Step 3 — Your recurring bills
+const BillsStepScreen: FC<{
+  totalSteps: number;
+  detection: DetectionState;
+  partialMode: StepperPartialMode;
+  onContinue: () => void;
+  onBack: () => void;
+  onBrowseTransactions?: () => void;
+}> = ({
+  totalSteps,
+  detection,
+  partialMode,
+  onContinue,
+  onBack,
+  onBrowseTransactions,
+}) => {
+  const billsDetected = detection === "high";
+
+  const subhead = billsDetected
+    ? "These bills are on our radar. We'll track them each cycle."
+    : detection === "building" || detection === "partial"
+      ? "We're still detecting your recurring bills. This can take up to a full billing cycle."
+      : "We didn't find any recurring charges yet. Bills paid in cash or from a different bank won't show up here.";
+
+  return (
+    <StepperShell
+      step={3}
+      totalSteps={totalSteps}
+      onBack={onBack}
+      primaryLabel="View my Cashflow"
+      onPrimary={onContinue}
+      secondaryLabel="Back"
+      onSecondary={onBack}
+      footerLink={
+        !billsDetected && partialMode === "show" && onBrowseTransactions
+          ? { label: "Browse transactions", onClick: onBrowseTransactions }
+          : undefined
+      }
+    >
+      <h1
+        style={{
+          fontSize: 28,
+          lineHeight: "36px",
+          fontWeight: 600,
+          letterSpacing: -1,
+          margin: 0,
+        }}
+      >
+        Your recurring bills
+      </h1>
+      <p
+        style={{
+          marginTop: 8,
+          fontSize: 14,
+          lineHeight: "20px",
+          color: T.textSecondary,
+          letterSpacing: -0.2,
+        }}
+      >
+        {subhead}
+      </p>
+
+      {billsDetected ? (
+        <div style={{ marginTop: 20 }}>
+          <Card>
+            {RECURRING_BILLS.map((bill, i) => (
+              <ExpandedRow
+                key={bill.name}
+                icon={
+                  <MerchantAvatar
+                    color={bill.color}
+                    initial={bill.name[0]}
+                    size={36}
+                  />
+                }
+                title={bill.name}
+                detail={bill.due}
+                amount={`$${bill.amount}`}
+                isLast={i === RECURRING_BILLS.length - 1}
+              />
+            ))}
+          </Card>
+        </div>
+      ) : (
+        partialMode === "show" && (
+          <div style={{ marginTop: 20 }}>
+            <Card pad={16}>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  textAlign: "center",
+                  gap: 12,
+                }}
+              >
+                <div
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: T.radiusFull,
+                    background:
+                      detection === "building" || detection === "partial"
+                        ? T.bgWarning
+                        : T.bgNeutral,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {detection === "building" || detection === "partial" ? (
+                    <RotateCw
+                      size={22}
+                      color={T.warning}
+                      strokeWidth={2}
+                      style={{ animation: "v2-spin 2s linear infinite" }}
+                    />
+                  ) : (
+                    <Receipt
+                      size={22}
+                      color={T.textTertiary}
+                      strokeWidth={2}
+                    />
+                  )}
+                </div>
+                <ConfidenceChip
+                  variant={
+                    detection === "building" || detection === "partial"
+                      ? "building"
+                      : "limited"
+                  }
+                />
+                <p
+                  style={{
+                    fontSize: 13,
+                    lineHeight: "18px",
+                    color: T.textSecondary,
+                    letterSpacing: -0.2,
+                    margin: 0,
+                  }}
+                >
+                  {detection === "building" || detection === "partial"
+                    ? "Recurring charges can take up to a billing cycle to appear. We'll update as we find them."
+                    : "Try browsing your recent transactions to tag a recurring charge manually."}
+                </p>
+              </div>
+            </Card>
+          </div>
+        )
+      )}
+    </StepperShell>
+  );
+};
+
+// Stepper flow controller — owns step routing and Skip-mode pruning
+const StepperFlow: FC<{
+  step: number;
+  detection: DetectionState;
+  partialMode: StepperPartialMode;
+  onStepChange: (step: number) => void;
+  onFinish: () => void;
+  onBack: () => void;
+  onBrowseTransactions: () => void;
+}> = ({
+  step,
+  detection,
+  partialMode,
+  onStepChange,
+  onFinish,
+  onBack,
+  onBrowseTransactions,
+}) => {
+  const incomeDetected = detection === "high" || detection === "partial";
+  const billsDetected = detection === "high";
+
+  // Build the ordered list of steps this user will see.
+  // Step 1 (accounts) always shows. Steps 2 & 3 are pruned in skip mode
+  // when the data for that step hasn't been detected.
+  const visibleSteps: number[] = [1];
+  if (partialMode === "show" || incomeDetected) visibleSteps.push(2);
+  if (partialMode === "show" || billsDetected) visibleSteps.push(3);
+
+  const totalSteps = visibleSteps.length;
+
+  const goNext = () => {
+    const currentIdx = visibleSteps.indexOf(step);
+    if (currentIdx < visibleSteps.length - 1) {
+      onStepChange(visibleSteps[currentIdx + 1]);
+    } else {
+      onFinish();
+    }
+  };
+
+  const goPrev = () => {
+    const currentIdx = visibleSteps.indexOf(step);
+    if (currentIdx > 0) {
+      onStepChange(visibleSteps[currentIdx - 1]);
+    } else {
+      onBack();
+    }
+  };
+
+  if (step === 1) {
+    return (
+      <AccountsStepScreen
+        totalSteps={totalSteps}
+        onContinue={goNext}
+        onBack={onBack}
+      />
+    );
+  }
+
+  if (step === 2) {
+    return (
+      <IncomeStepScreen
+        totalSteps={totalSteps}
+        detection={detection}
+        partialMode={partialMode}
+        onContinue={goNext}
+        onBack={goPrev}
+      />
+    );
+  }
+
+  return (
+    <BillsStepScreen
+      totalSteps={totalSteps}
+      detection={detection}
+      partialMode={partialMode}
+      onContinue={onFinish}
+      onBack={goPrev}
+      onBrowseTransactions={onBrowseTransactions}
+    />
   );
 };
 
@@ -3683,6 +4284,7 @@ type DemoState =
   | { screen: "splash"; page: number; linked: boolean }
   | { screen: "gate"; gateState: GateState }
   | { screen: "overview"; detection: DetectionState }
+  | { screen: "stepperA2b"; step: number; detection: DetectionState; partialMode: StepperPartialMode }
   | { screen: "bills"; billsState: BillsState }
   | { screen: "picker"; pickerState: PickerState }
   | { screen: "dashboard"; heroState: DashboardHeroState };
@@ -3713,6 +4315,22 @@ const SWITCHER_GROUPS: SwitcherGroup[] = [
       { label: "Partial", state: { screen: "overview", detection: "partial" } },
       { label: "Building", state: { screen: "overview", detection: "building" } },
       { label: "Low confidence", state: { screen: "overview", detection: "low" } },
+    ],
+  },
+  {
+    id: "stepperA2b",
+    title: "A2b Stepper",
+    entries: [
+      { label: "Step 1 · High", state: { screen: "stepperA2b", step: 1, detection: "high", partialMode: "skip" } },
+      { label: "Step 2 · High", state: { screen: "stepperA2b", step: 2, detection: "high", partialMode: "skip" } },
+      { label: "Step 3 · High", state: { screen: "stepperA2b", step: 3, detection: "high", partialMode: "skip" } },
+      { label: "Step 1 · Partial", state: { screen: "stepperA2b", step: 1, detection: "partial", partialMode: "skip" } },
+      { label: "Step 2 · Partial (Skip)", state: { screen: "stepperA2b", step: 2, detection: "partial", partialMode: "skip" } },
+      { label: "Step 2 · Building (Show)", state: { screen: "stepperA2b", step: 2, detection: "building", partialMode: "show" } },
+      { label: "Step 2 · Low (Show)", state: { screen: "stepperA2b", step: 2, detection: "low", partialMode: "show" } },
+      { label: "Step 3 · Partial (Show)", state: { screen: "stepperA2b", step: 3, detection: "partial", partialMode: "show" } },
+      { label: "Step 3 · Building (Show)", state: { screen: "stepperA2b", step: 3, detection: "building", partialMode: "show" } },
+      { label: "Step 3 · Low (Show)", state: { screen: "stepperA2b", step: 3, detection: "low", partialMode: "show" } },
     ],
   },
   {
@@ -3749,6 +4367,7 @@ const groupIdForState = (s: DemoState): string => {
   if (s.screen === "splash") return "splash";
   if (s.screen === "gate") return "gate";
   if (s.screen === "overview") return "overview";
+  if (s.screen === "stepperA2b") return "stepperA2b";
   if (s.screen === "bills") return "bills";
   if (s.screen === "picker") return "picker";
   return "dashboard";
@@ -3760,6 +4379,8 @@ const summarizeState = (s: DemoState): string => {
     return `A0 Splash · ${s.linked ? "Linked" : "Unlinked"} · Page ${s.page + 1}`;
   if (s.screen === "gate") return `A1 Gate · ${s.gateState}`;
   if (s.screen === "overview") return `A2 Overview · ${s.detection}`;
+  if (s.screen === "stepperA2b")
+    return `A2b Step ${s.step} · ${s.detection} · ${s.partialMode}`;
   if (s.screen === "bills") return `A3 Bills · ${s.billsState}`;
   if (s.screen === "picker") return `A3.1 Picker · ${s.pickerState}`;
   return `Dashboard · ${s.heroState}`;
@@ -3768,7 +4389,10 @@ const summarizeState = (s: DemoState): string => {
 const StateSwitcher: FC<{
   current: DemoState;
   setCurrent: (s: DemoState) => void;
-}> = ({ current, setCurrent }) => {
+  demoConfig: DemoConfig;
+  setDemoConfig: (c: DemoConfig) => void;
+  onStartFlow: () => void;
+}> = ({ current, setCurrent, demoConfig, setDemoConfig, onStartFlow }) => {
   // Splash has a sub-toggle for the linked flag. Default to the current
   // splash linked value if we're on splash, else linked.
   const [splashLinked, setSplashLinked] = useState(
@@ -3858,7 +4482,7 @@ const StateSwitcher: FC<{
               background: T.accent,
             }}
           />
-          Cashflow V2 · Demo
+          Mastiff · Cashflow
         </div>
         <div
           style={{
@@ -3871,6 +4495,236 @@ const StateSwitcher: FC<{
         >
           {summarizeState(current)}
         </div>
+      </div>
+
+      <div style={{ height: 1, background: T.border, margin: "0 -12px 8px" }} />
+
+      {/* Demo Setup — cascading selectors */}
+      <div style={{ padding: "0 2px 10px" }}>
+        <div
+          style={{
+            fontSize: 10,
+            fontWeight: 600,
+            color: T.textTertiary,
+            letterSpacing: 0.5,
+            textTransform: "uppercase" as const,
+            marginBottom: 8,
+            padding: "0 4px",
+          }}
+        >
+          Demo Setup
+        </div>
+
+        {/* Row 1: Path */}
+        <div style={{ marginBottom: 6 }}>
+          <div
+            style={{
+              fontSize: 11,
+              color: T.textSecondary,
+              letterSpacing: -0.2,
+              marginBottom: 4,
+              padding: "0 4px",
+            }}
+          >
+            Path
+          </div>
+          <div
+            style={{
+              display: "flex",
+              gap: 4,
+              padding: 3,
+              background: T.bgPrimary,
+              borderRadius: T.radiusFull,
+              border: `1px solid ${T.border}`,
+            }}
+          >
+            {([
+              { key: "a2" as const, label: "One-pager" },
+              { key: "a2b" as const, label: "Stepper" },
+            ]).map((opt) => (
+              <button
+                key={opt.key}
+                onClick={() =>
+                  setDemoConfig({ ...demoConfig, path: opt.key })
+                }
+                style={{
+                  flex: 1,
+                  height: 24,
+                  border: 0,
+                  borderRadius: T.radiusFull,
+                  background:
+                    demoConfig.path === opt.key ? T.bgCard : "transparent",
+                  color:
+                    demoConfig.path === opt.key
+                      ? T.textPrimary
+                      : T.textTertiary,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  letterSpacing: -0.2,
+                  fontFamily: FONT_FAMILY,
+                  cursor: "pointer",
+                  boxShadow:
+                    demoConfig.path === opt.key
+                      ? "0 1px 2px rgba(0,0,0,0.06)"
+                      : "none",
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Row 2: Mode — only when Stepper */}
+        {demoConfig.path === "a2b" && (
+          <div style={{ marginBottom: 6 }}>
+            <div
+              style={{
+                fontSize: 11,
+                color: T.textSecondary,
+                letterSpacing: -0.2,
+                marginBottom: 4,
+                padding: "0 4px",
+              }}
+            >
+              Mode
+            </div>
+            <div
+              style={{
+                display: "flex",
+                gap: 4,
+                padding: 3,
+                background: T.bgPrimary,
+                borderRadius: T.radiusFull,
+                border: `1px solid ${T.border}`,
+              }}
+            >
+              {([
+                { key: "skip" as const, label: "Skip" },
+                { key: "show" as const, label: "Show" },
+              ]).map((opt) => (
+                <button
+                  key={opt.key}
+                  onClick={() =>
+                    setDemoConfig({ ...demoConfig, mode: opt.key })
+                  }
+                  style={{
+                    flex: 1,
+                    height: 24,
+                    border: 0,
+                    borderRadius: T.radiusFull,
+                    background:
+                      demoConfig.mode === opt.key ? T.bgCard : "transparent",
+                    color:
+                      demoConfig.mode === opt.key
+                        ? T.textPrimary
+                        : T.textTertiary,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    letterSpacing: -0.2,
+                    fontFamily: FONT_FAMILY,
+                    cursor: "pointer",
+                    boxShadow:
+                      demoConfig.mode === opt.key
+                        ? "0 1px 2px rgba(0,0,0,0.06)"
+                        : "none",
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Row 3: Detection */}
+        <div style={{ marginBottom: 10 }}>
+          <div
+            style={{
+              fontSize: 11,
+              color: T.textSecondary,
+              letterSpacing: -0.2,
+              marginBottom: 4,
+              padding: "0 4px",
+            }}
+          >
+            Detection
+          </div>
+          <div
+            style={{
+              display: "flex",
+              gap: 3,
+              padding: 3,
+              background: T.bgPrimary,
+              borderRadius: T.radiusFull,
+              border: `1px solid ${T.border}`,
+            }}
+          >
+            {([
+              { key: "high" as const, label: "High" },
+              { key: "partial" as const, label: "Partial" },
+              { key: "building" as const, label: "Building" },
+              { key: "low" as const, label: "Low" },
+            ]).map((opt) => (
+              <button
+                key={opt.key}
+                onClick={() =>
+                  setDemoConfig({ ...demoConfig, detection: opt.key })
+                }
+                style={{
+                  flex: 1,
+                  height: 24,
+                  border: 0,
+                  borderRadius: T.radiusFull,
+                  background:
+                    demoConfig.detection === opt.key
+                      ? T.bgCard
+                      : "transparent",
+                  color:
+                    demoConfig.detection === opt.key
+                      ? T.textPrimary
+                      : T.textTertiary,
+                  fontSize: 10,
+                  fontWeight: 600,
+                  letterSpacing: -0.2,
+                  fontFamily: FONT_FAMILY,
+                  cursor: "pointer",
+                  boxShadow:
+                    demoConfig.detection === opt.key
+                      ? "0 1px 2px rgba(0,0,0,0.06)"
+                      : "none",
+                  padding: "0 2px",
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Start button */}
+        <button
+          onClick={onStartFlow}
+          style={{
+            width: "100%",
+            height: 30,
+            borderRadius: T.radiusFull,
+            border: 0,
+            background: T.tealPrimary,
+            color: T.textPrimary,
+            fontSize: 12,
+            fontWeight: 600,
+            letterSpacing: -0.2,
+            fontFamily: FONT_FAMILY,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+          }}
+        >
+          ▶ Start from Splash
+        </button>
       </div>
 
       <div style={{ height: 1, background: T.border, margin: "0 -12px 8px" }} />
@@ -4026,7 +4880,7 @@ const StateSwitcher: FC<{
           letterSpacing: -0.2,
         }}
       >
-        Phase 1 prototype · 4 hero states · all 7 sections live
+        Mastiff · A2 + A2b onboarding · all dashboard states
       </div>
     </div>
   );
@@ -4042,22 +4896,28 @@ export default function CashFlowV2Draft() {
     linked: true,
   });
 
+  const [demoConfig, setDemoConfig] = useState<DemoConfig>({
+    path: "a2",
+    mode: "skip",
+    detection: "high",
+  });
+
   const goSplash = (linked = true) =>
     setDemo({ screen: "splash", page: 0, linked });
   const goGate = () => setDemo({ screen: "gate", gateState: "default" });
   const goOverview = (
     detection: DetectionState = "high",
   ): void => setDemo({ screen: "overview", detection });
+  const goStepper = (
+    detection: DetectionState = "high",
+    partialMode: StepperPartialMode = "skip",
+  ) =>
+    setDemo({ screen: "stepperA2b", step: 1, detection, partialMode });
   const goBills = () => setDemo({ screen: "bills", billsState: "default" });
   const goPicker = () => setDemo({ screen: "picker", pickerState: "default" });
   const goDashboard = (heroState: DashboardHeroState = "positive") =>
     setDemo({ screen: "dashboard", heroState });
 
-  // Map A2 Overview detection state → Dashboard hero state. In production,
-  // High/Partial fork into Positive/Negative based on the actual STS
-  // calculation. The prototype uses a stable demo-friendly mapping so each
-  // Overview state has a clear, deterministic dashboard counterpart for
-  // stakeholder walk-throughs.
   const heroForDetection = (d: DetectionState): DashboardHeroState => {
     if (d === "high") return "positive";
     if (d === "partial") return "negative";
@@ -4065,29 +4925,35 @@ export default function CashFlowV2Draft() {
     return "low";
   };
 
-  // Splash routing: linked users land on Overview; unlinked users go through
-  // the Linking Gate. Linking completes (loading → success) auto-routes them
-  // to A2 Overview in `building` state — detection takes up to 24h.
+  const onStartFlow = () =>
+    setDemo({ screen: "splash", page: 0, linked: true });
+
   const onSplashContinue = () => {
     if (demo.screen !== "splash") return;
     if (demo.linked) {
-      goOverview("high");
+      if (demoConfig.path === "a2b") {
+        goStepper(demoConfig.detection, demoConfig.mode);
+      } else {
+        goOverview(demoConfig.detection);
+      }
     } else {
       goGate();
     }
   };
 
-  // Auto-progress the linking loading state. After 1.5s of "loading", route
-  // the user to A2 Overview with the `building` detection state — production
-  // detection takes up to 24h, so the very first post-link Overview is
-  // always Building.
   useEffect(() => {
     if (demo.screen === "gate" && demo.gateState === "loading") {
-      const t = setTimeout(() => goOverview("building"), 1500);
+      const t = setTimeout(() => {
+        if (demoConfig.path === "a2b") {
+          goStepper(demoConfig.detection, demoConfig.mode);
+        } else {
+          goOverview(demoConfig.detection);
+        }
+      }, 1500);
       return () => clearTimeout(t);
     }
     return undefined;
-  }, [demo]);
+  }, [demo, demoConfig]);
 
   let phone: ReactNode;
 
@@ -4119,6 +4985,20 @@ export default function CashFlowV2Draft() {
         onTapBills={goBills}
       />
     );
+  } else if (demo.screen === "stepperA2b") {
+    phone = (
+      <StepperFlow
+        step={demo.step}
+        detection={demo.detection}
+        partialMode={demo.partialMode}
+        onStepChange={(s) =>
+          setDemo({ ...demo, step: s })
+        }
+        onFinish={() => goDashboard(heroForDetection(demo.detection))}
+        onBack={goSplash}
+        onBrowseTransactions={goPicker}
+      />
+    );
   } else if (demo.screen === "bills") {
     phone = (
       <ConfirmBillsScreen
@@ -4136,28 +5016,142 @@ export default function CashFlowV2Draft() {
     phone = (
       <DashboardScreen
         state={demo.heroState}
-        onBack={goOverview}
+        onBack={() => {
+          if (demoConfig.path === "a2b") {
+            goStepper(demoConfig.detection, demoConfig.mode);
+          } else {
+            goOverview(demoConfig.detection);
+          }
+        }}
         onAddDetails={goBills}
       />
     );
   }
 
+  const screenLabel = (() => {
+    if (demo.screen === "splash") return "Splash";
+    if (demo.screen === "gate") return "Linking Gate";
+    if (demo.screen === "overview") return "Overview";
+    if (demo.screen === "stepperA2b") return `Stepper · Step ${demo.step}`;
+    if (demo.screen === "bills") return "Confirm Bills";
+    if (demo.screen === "picker") return "Transaction Picker";
+    return "Dashboard";
+  })();
+
   return (
     <div
       style={{
         minHeight: "100vh",
-        background: "#E5E5E5",
-        padding: 32,
-        display: "flex",
-        gap: 32,
-        alignItems: "flex-start",
-        justifyContent: "center",
+        background: "#F0F0F0",
         fontFamily: FONT_FAMILY,
       }}
     >
       <style>{`@keyframes v2-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-      <StateSwitcher current={demo} setCurrent={setDemo} />
-      {phone}
+
+      {/* Page header */}
+      <div
+        style={{
+          padding: "20px 32px",
+          borderBottom: "1px solid rgba(0,0,0,0.08)",
+          background: "#FFFFFF",
+          display: "flex",
+          alignItems: "baseline",
+          gap: 12,
+        }}
+      >
+        <span
+          style={{
+            fontSize: 16,
+            fontWeight: 700,
+            letterSpacing: -0.3,
+            color: T.textPrimary,
+          }}
+        >
+          MoneyLion
+        </span>
+        <span
+          style={{
+            fontSize: 14,
+            fontWeight: 400,
+            color: T.textSecondary,
+            letterSpacing: -0.2,
+          }}
+        >
+          Mastiff — Cashflow Prototype
+        </span>
+      </div>
+
+      {/* Body */}
+      <div
+        style={{
+          padding: "32px 32px 48px",
+          display: "flex",
+          gap: 40,
+          alignItems: "flex-start",
+          justifyContent: "center",
+        }}
+      >
+        {/* Left column: scenarios + switcher */}
+        <div>
+          <div style={{ marginBottom: 6 }}>
+            <div
+              style={{
+                fontSize: 10,
+                fontWeight: 600,
+                color: T.textTertiary,
+                letterSpacing: 0.8,
+                textTransform: "uppercase" as const,
+                marginBottom: 4,
+              }}
+            >
+              Scenarios
+            </div>
+            <p
+              style={{
+                fontSize: 12,
+                lineHeight: "17px",
+                color: T.textSecondary,
+                letterSpacing: -0.2,
+                margin: 0,
+                maxWidth: 220,
+              }}
+            >
+              Use these controls to change mock data. The phone shows the
+              mobile UI at 375×812px.
+            </p>
+          </div>
+          <StateSwitcher
+            current={demo}
+            setCurrent={setDemo}
+            demoConfig={demoConfig}
+            setDemoConfig={setDemoConfig}
+            onStartFlow={onStartFlow}
+          />
+        </div>
+
+        {/* Right column: breakpoint label + phone */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+          }}
+        >
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: 0.8,
+              color: T.textTertiary,
+              textTransform: "uppercase" as const,
+              marginBottom: 16,
+            }}
+          >
+            {screenLabel} · 375 × 812PX
+          </div>
+          {phone}
+        </div>
+      </div>
     </div>
   );
 }
