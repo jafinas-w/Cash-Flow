@@ -35,11 +35,74 @@ Existing prototypes built against MLDS-4.0 values do not need to be retroactivel
 ## Setup for Vite prototype apps (`cashflow-prototype/`)
 
 1. Copy the Baton Turbo `.otf` files to `cashflow-prototype/public/fonts/` (they live at `/Users/jaf.jaffaizal/Desktop/🦁/00 AI/MoneyLion Design System/fonts/`).
-2. Drop the full `colors_and_type.css` into `cashflow-prototype/src/styles/mlds-tokens.css`.
-3. Import once at the entry: `import './styles/mlds-tokens.css'` in `src/main.tsx`.
-4. In inline-style components, reference tokens via `var(--ml-*)` strings or a typed JS object that mirrors the tokens (see `T = { ... }` pattern at the top of `prototypes/CashFlowV2Draft.canvas.tsx`).
+2. Copy the MLDS asset library to `cashflow-prototype/public/assets/` (logos, bank marks, icons — see "Asset Library" section below).
+3. Drop the full `colors_and_type.css` into `cashflow-prototype/src/styles/mlds-tokens.css`.
+4. Import once at the entry: `import './styles/mlds-tokens.css'` in `src/main.tsx`.
+5. In inline-style components, reference tokens via `var(--ml-*)` strings or a typed JS object that mirrors the tokens (see `T = { ... }` pattern at the top of `prototypes/CashFlowV2Draft.canvas.tsx`).
 
 If the font files cannot be bundled (e.g., a stakeholder-facing artifact must be portable), fall back to `'DM Sans', -apple-system, system-ui, sans-serif` and explicitly note the substitution under the artifact.
+
+---
+
+## Asset Library
+
+Real MLDS assets ship in `cashflow-prototype/public/assets/` and are served at `/assets/...` from the Vite root. Always prefer real assets over Lucide stand-ins or hand-drawn shapes for these specific cases.
+
+### Logos (`/assets/`)
+
+| File | Use |
+|---|---|
+| `logomark-black.svg` | ML "bite mark" mark on light surfaces |
+| `logomark-teal.svg` | ML mark on dark surfaces, brand moments |
+| `logo-mlone-black.svg` | MoneyLion One wordmark, light surfaces |
+| `logo-mlone-white.svg` | MoneyLion One wordmark, dark surfaces |
+
+### Bank marks (`/assets/banks/`)
+
+| File | Use |
+|---|---|
+| `RoarMoney_40.svg` | MoneyLion's RoarMoney account avatar (white circle + teal-accented wallet mark) |
+| `Chase_40.svg` | Chase Bank account avatar |
+| `BankOfAmerica_40.svg` | Bank of America account avatar |
+| `AmericanExpress_40.svg` | Amex card avatar |
+| `Mastercard_40.svg` | Mastercard avatar |
+
+If a needed bank isn't present (e.g., Wells Fargo, Capital One), fall back to a tinted-initial avatar pattern (`MerchantAvatar` in the V2 prototype). Do **not** approximate a bank logo from memory.
+
+### Icons (`/assets/icons/`)
+
+24×24, black `currentColor`, 2px stroke, rounded caps. The 17 icons currently shipped:
+
+`action-close`, `action-plus`, `action-search`, `action-share`, `arrow`, `bookmark`, `car`, `check`, `chevron`, `gift`, `history`, `home`, `info`, `offer`, `receipt`, `spending`, `user`.
+
+For any other glyph (chevrons in non-default direction, balance/wallet, calendar, etc.), use the closest **Lucide** match (already a project dependency — `lucide-react`) and add a code comment flagging the substitution.
+
+### React usage
+
+```tsx
+// Logo / brand mark
+<img src="/assets/logomark-black.svg" alt="MoneyLion" width={32} height={32} />
+
+// Bank avatar in a list row
+<img
+  src="/assets/banks/Chase_40.svg"
+  alt="Chase"
+  width={40}
+  height={40}
+  style={{ borderRadius: 999 }}
+/>
+
+// Inline icon (recolorable via CSS mask if needed; SVGs use currentColor)
+<img src="/assets/icons/check.svg" alt="" width={24} height={24} />
+```
+
+For colored/themed icons, prefer `lucide-react` components (recolorable via `color` prop) over the static SVGs in `/assets/icons/` since the SVGs ship as pure black.
+
+### Standing rules
+
+- **Never recreate logos or bank marks from memory.** Use the real SVGs or fall back to initial avatars.
+- **Bank-tinted color avatars are the fallback,** not the default. Real bank marks always win when available.
+- **Do not embed asset SVGs as base64 / inline strings** in prototype source. Reference them via `/assets/...` paths so the `public/` folder remains the single source of truth.
 
 ---
 

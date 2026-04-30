@@ -1,0 +1,11 @@
+{
+  "name": "cash-flow-workspace",
+  "private": true,
+  "description": "Workspace root. Passthrough scripts for the cashflow-prototype Vite app so you can run npm commands from anywhere in the repo.",
+  "scripts": {
+    "dev": "npm --prefix cashflow-prototype run dev",
+    "build": "npm --prefix cashflow-prototype run build",
+    "preview": "npm --prefix cashflow-prototype run preview",
+    "lint": "npm --prefix cashflow-prototype run lint"
+  }
+}

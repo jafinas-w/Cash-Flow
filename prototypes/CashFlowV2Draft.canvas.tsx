@@ -97,10 +97,34 @@ type PickerState = "default" | "building" | "toast";
 // =====================================================================
 // Mock Data
 // =====================================================================
-const BANK_ACCOUNTS = [
-  { name: "RoarMoney Banking", detail: "1234", balance: 430, color: "#00B89D" },
-  { name: "Chase Bank", detail: "Savings · 4390", balance: 430, color: "#117ACA" },
-  { name: "Bank of America", detail: "Checking · 8830", balance: 1300, color: "#E31837" },
+// Real MLDS bank marks live in /assets/banks/. All three accounts now render
+// from self-contained 40px SVG avatars.
+const BANK_ACCOUNTS: Array<{
+  name: string;
+  detail: string;
+  balance: number;
+  color?: string;
+  src?: string;
+  iconSrc?: string;
+}> = [
+  {
+    name: "RoarMoney Banking",
+    detail: "1234",
+    balance: 430,
+    src: "/assets/banks/RoarMoney_40.svg",
+  },
+  {
+    name: "Chase Bank",
+    detail: "Savings · 4390",
+    balance: 430,
+    src: "/assets/banks/Chase_40.svg",
+  },
+  {
+    name: "Bank of America",
+    detail: "Checking · 8830",
+    balance: 1300,
+    src: "/assets/banks/BankOfAmerica_40.svg",
+  },
 ];
 
 const PAYCHECK_SOURCES = [
@@ -421,29 +445,80 @@ const SectionHeader: FC<{ children: ReactNode; mt?: number }> = ({
   </div>
 );
 
+// Three avatar modes, in priority order:
+//   1. `src`     — self-contained logo (e.g., Chase_40.svg has its own circle bg)
+//   2. `iconSrc` — icon glyph rendered inside a `color`-tinted circle (e.g., ML
+//                  logomark inside a teal circle for RoarMoney)
+//   3. `initial` — tinted-initial fallback when no real logo is available
+// Per MLDS-prototype-tokens.mdc: prefer real assets in /assets over fallbacks.
 const MerchantAvatar: FC<{
-  color: string;
-  initial: string;
+  color?: string;
+  initial?: string;
   size?: number;
-}> = ({ color, initial, size = 36 }) => (
-  <div
-    style={{
-      width: size,
-      height: size,
-      borderRadius: T.radiusFull,
-      background: color,
-      color: "#FFFFFF",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontSize: size === 36 ? 14 : 12,
-      fontWeight: 600,
-      flexShrink: 0,
-    }}
-  >
-    {initial}
-  </div>
-);
+  src?: string;
+  iconSrc?: string;
+}> = ({ color, initial, size = 36, src, iconSrc }) => {
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt=""
+        width={size}
+        height={size}
+        style={{
+          borderRadius: 999,
+          flexShrink: 0,
+          display: "block",
+        }}
+      />
+    );
+  }
+
+  if (iconSrc) {
+    return (
+      <div
+        style={{
+          width: size,
+          height: size,
+          borderRadius: 999,
+          background: color || T.bgNeutral,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+        }}
+      >
+        <img
+          src={iconSrc}
+          alt=""
+          width={Math.round(size * 0.55)}
+          height={Math.round(size * 0.55)}
+          style={{ display: "block" }}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: 999,
+        background: color || T.bgNeutral,
+        color: "#FFFFFF",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: size === 36 ? 14 : 12,
+        fontWeight: 600,
+        flexShrink: 0,
+      }}
+    >
+      {initial}
+    </div>
+  );
+};
 
 // =====================================================================
 // Splash Illustrations (placeholder using lucide stacks)
@@ -1076,6 +1151,8 @@ const OverviewScreen: FC<{
                       color={acc.color}
                       initial={acc.name[0]}
                       size={32}
+                      src={acc.src}
+                      iconSrc={acc.iconSrc}
                     />
                   }
                   title={acc.name}
